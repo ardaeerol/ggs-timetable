@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GGS Timetable</title>
+<meta name="theme-color" content="#12676A">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one-column phone app, survey-sheet feel: thin rules, mono coordinates, a levelling-staff time ruler on the next class. */
+:root{
+  --bg:#F2F4F1; --surface:#FFFFFF; --sunk:#E8ECE8; --ink:#15201C; --muted:#5C6964; --line:#D5DCD7;
+  --accent:#C2372A; --accent-ink:#FFFFFF; --teal:#12676A; --teal-soft:#DCEDEB;
+  --ok:#2E7D4F; --warn:#A86A00; --warn-soft:#FBEFD6; --bad:#B3261E; --bad-soft:#F8E0DD;
+  --f-display:"Barlow Condensed","Roboto Condensed","Arial Narrow",sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"Roboto Mono",monospace;
+  --r:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1412; --surface:#17201D; --sunk:#111917; --ink:#E6ECE9; --muted:#93A19B; --line:#2A3531;
+  --accent:#EE6450; --accent-ink:#1A0A07; --teal:#5BBDB6; --teal-soft:#16302E;
+  --ok:#6CC28F; --warn:#E3A93D; --warn-soft:#2F2614; --bad:#F2827A; --bad-soft:#341B19; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1412; --surface:#17201D; --sunk:#111917; --ink:#E6ECE9; --muted:#93A19B; --line:#2A3531;
+  --accent:#EE6450; --accent-ink:#1A0A07; --teal:#5BBDB6; --teal-soft:#16302E;
+  --ok:#6CC28F; --warn:#E3A93D; --warn-soft:#2F2614; --bad:#F2827A; --bad-soft:#341B19; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--f-body);padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:calc(72px + env(safe-area-inset-bottom,0px));-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+.wrap{max-width:640px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 24px}
+header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-block:6px 14px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.brand{font:700 26px/1 var(--f-display);letter-spacing:.01em;text-transform:uppercase}
+.brand small{display:block;font:500 12px/1.3 var(--f-mono);letter-spacing:.02em;text-transform:none;color:var(--muted);margin-top:4px}
+.chip{display:inline-flex;align-items:center;gap:6px;font:500 12px/1 var(--f-mono);padding:6px 9px;border-radius:999px;background:var(--sunk);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
+.chip.live{color:var(--teal);border-color:var(--teal);background:var(--teal-soft)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+h2{font:600 13px/1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:22px 0 10px}
+h3{font:600 20px/1.15 var(--f-display);margin:0;text-wrap:balance}
+p{margin:0}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono);font-size:12.5px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+button,.btn{font:600 14px/1 var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:10px 13px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;min-height:40px}
+button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.btn.primary,button.primary{background:var(--teal);border-color:var(--teal);color:var(--bg)}
+.btn.hot,button.hot{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.ghost{background:transparent}
+button.small{min-height:32px;padding:7px 10px;font-size:13px}
+button.danger{color:var(--bad);border-color:var(--bad)}
+.pill{font:600 11px/1 var(--f-mono);padding:4px 7px;border-radius:5px;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap}
+.pill.ex{background:var(--sunk);color:var(--muted)}
+.pill.lec{background:var(--teal-soft);color:var(--teal)}
+.pill.chg{background:var(--warn-soft);color:var(--warn)}
+.pill.cx{background:var(--bad-soft);color:var(--bad)}
+.pill.q{background:var(--warn-soft);color:var(--warn)}
+/* Next class */
+.next{position:relative;overflow:hidden;padding:16px 16px 16px 26px}
+.next::before{content:"";position:absolute;left:0;top:0;bottom:0;width:10px;
+  background:repeating-linear-gradient(180deg,var(--accent) 0 12px,var(--surface) 12px 24px);border-right:1px solid var(--line)}
+.next .when{font:700 44px/1 var(--f-display);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.next .when span{font-size:22px;color:var(--muted);font-weight:500}
+.leave{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.leave dt{font:600 11px/1.6 var(--f-mono);text-transform:uppercase;color:var(--muted);letter-spacing:.04em}
+.leave dd{margin:0;font-variant-numeric:tabular-nums;min-width:0}
+.leave .big{font:700 22px/1 var(--f-display)}
+.urgent .big{color:var(--accent)}
+/* Timeline */
+.tl{list-style:none;margin:0;padding:0;border-left:2px solid var(--line);margin-left:6px}
+.tl li{position:relative;padding:0 0 14px 16px}
+.tl li::before{content:"";position:absolute;left:-6px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--muted)}
+.tl li.now::before{background:var(--accent);border-color:var(--accent)}
+.tl li.past{opacity:.55}
+.tl li.cancel .t{text-decoration:line-through}
+.tl .time{font:600 15px/1.2 var(--f-display);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.tl .t{font-weight:600}
+.occ{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;background:none;padding:0;min-height:0;font:inherit;color:inherit;cursor:pointer}
+.occ>div{min-width:0}
+/* Week */
+.weeknav{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.weeknav strong{font:600 18px/1 var(--f-display);letter-spacing:.02em}
+.day{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.day header{display:flex;justify-content:space-between;padding:9px 12px;background:var(--sunk);font:600 14px/1 var(--f-display);letter-spacing:.06em;text-transform:uppercase}
+.day.today header{background:var(--teal-soft);color:var(--teal)}
+.slot{display:grid;grid-template-columns:62px 1fr;gap:10px;padding:10px 12px;border-top:1px solid var(--line);width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;border-radius:0;font:inherit;color:inherit;min-height:0;cursor:pointer}
+.slot:first-of-type{border-top:0}
+.slot .time{font:600 14px/1.25 var(--f-display);font-variant-numeric:tabular-nums}
+.slot.dim{opacity:.5}
+.slot>div{min-width:0}
+/* Forms */
+label{display:flex;flex-direction:column;gap:5px;font:600 12px/1.2 var(--f-mono);text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+input,select,textarea{font:15px/1.3 var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;width:100%;min-width:0;text-transform:none;letter-spacing:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.toggle{flex-direction:row;align-items:center;justify-content:space-between;text-transform:none;font:500 15px/1.3 var(--f-body);color:var(--ink);letter-spacing:0}
+.toggle input{width:22px;height:22px;flex:none}
+.set{display:flex;flex-direction:column;gap:12px}
+.result{display:block;width:100%;text-align:left;font-weight:500}
+/* Mensa */
+.meal{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
+.meal:first-child{border-top:0}
+.meal .price{font:500 13px/1.3 var(--f-mono);white-space:nowrap;font-variant-numeric:tabular-nums}
+/* Nav */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);
+  padding:0 max(8px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(8px,env(safe-area-inset-left,0px));display:flex;justify-content:space-around}
+nav.tabs a{flex:1;max-width:120px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 10px;color:var(--muted);text-decoration:none;font:600 12px/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase}
+nav.tabs a svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
+nav.tabs a[aria-current="page"]{color:var(--teal)}
+/* Sheet */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:640px;max-height:88vh;overflow:auto;border-radius:16px 16px 0 0;
+  padding:18px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.sheet .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:-6px auto 12px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--ink);color:var(--bg);padding:11px 15px;border-radius:10px;max-width:calc(100% - 32px);font-weight:500;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.notice{border-left:3px solid var(--warn);background:var(--warn-soft);padding:10px 12px;border-radius:6px}
+.empty{padding:22px 14px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r)}
+@media (prefers-reduced-motion: no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">GGS Timetable<small id="hdrDate">TU Berlin · Geodesy &amp; Geoinformation</small></div>
+    <span class="chip" id="originChip"><span class="dot"></span><span id="originText">No address</span></span>
+  </header>
+
+  <section id="v-today"></section>
+  <section id="v-week" hidden></section>
+  <section id="v-exams" hidden></section>
+  <section id="v-mensa" hidden></section>
+  <section id="v-settings" hidden></section>
+</div>
+
+<nav class="tabs" aria-label="Sections">
+  <a href="#today" data-v="today"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>Today</a>
+  <a href="#week" data-v="week"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Week</a>
+  <a href="#exams" data-v="exams"><svg viewBox="0 0 24 24"><path d="M6 3.5h9l3 3V20.5H6z"/><path d="M9 11h6M9 15h6"/></svg>Exams</a>
+  <a href="#mensa" data-v="mensa"><svg viewBox="0 0 24 24"><path d="M7 3v8a2 2 0 0 0 2 2v8M5 3v5M9 3v5M17 3c-2 2-2 7 0 9v9"/></svg>Mensa</a>
+  <a href="#prefs" data-v="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>Settings</a>
+</nav>
+
+<div id="sheetHost"></div>
+<div id="toastHost"></div>
+
+<script src="engine.js"></script>
+<script>
+'use strict';
+const E = window.Engine;
+const $ = s => document.querySelector(s);
+const h = s => String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+let S = E.defaultState(), A = {}, T = {}, LOC = null;
+let view = 'today', weekOffset = 0, mensaDay = 0, swReg = null, idbOK = true;
+
+// ---------- persistence ----------
+async function save() { try { await E.kvSet('state', S); } catch (e) { idbOK = false; } }
+async function reloadShared() {
+  try { A = (await E.kvGet('answers')) || {}; T = (await E.kvGet('travel')) || {}; } catch (e) {}
+}
+async function answer(setId, date, opt) {
+  try { A = await E.setAnswer(setId, date, opt); } catch (e) { if (opt) A[setId + '|' + date] = opt; else delete A[setId + '|' + date]; }
+  render(); runTick();
+}
+
+// ---------- helpers ----------
+function toast(msg, ms) {
+  const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg; el.setAttribute('role', 'status');
+  $('#toastHost').replaceChildren(el); setTimeout(() => el.remove(), ms || 3200);
+}
+function dur(ms) {
+  const m = Math.round(ms / 60000); if (m < 1) return 'now';
+  if (m < 60) return m + ' min'; const hh = Math.floor(m / 60), mm = m % 60;
+  if (hh < 24) return hh + ' h' + (mm ? ' ' + mm + ' min' : ''); const d = Math.round(hh / 24); return d + (d === 1 ? ' day' : ' days');
+}
+function fmtDate(d) { return SHORT[d.getDay()] + ' ' + d.getDate() + '.' + (d.getMonth() + 1) + '.'; }
+function coord(p) { return p.lat == null ? '' : p.lat.toFixed(4) + '° N · ' + p.lng.toFixed(4) + '° E'; }
+function typePill(t) { return '<span class="pill ' + (t === 'Lecture' ? 'lec' : 'ex') + '">' + h(t || 'Class') + '</span>'; }
+function origin() { return E.currentOrigin(S, LOC, Date.now()); }
+function openSheet(html, onMount) {
+  const host = $('#sheetHost');
+  host.innerHTML = '<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>' + html + '</div></div>';
+  $('#scrim').addEventListener('click', e => { if (e.target.id === 'scrim') closeSheet(); });
+  if (onMount) onMount(host.querySelector('.sheet'));
+}
+function closeSheet() { $('#sheetHost').innerHTML = ''; }
+async function shareOrDownload(name, text, mime) {
+  const file = new File([text], name, { type: mime });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: name }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+
+// ---------- header ----------
+function renderHeader() {
+  const now = new Date();
+  $('#hdrDate').textContent = DAYS[now.getDay()] + ', ' + now.getDate() + '.' + (now.getMonth() + 1) + '.' + now.getFullYear() + ' · ' + E.TERM.name;
+  const o = origin();
+  $('#originChip').classList.toggle('live', !!(o && o.kind === 'gps'));
+  $('#originText').textContent = o ? (o.kind === 'gps' ? 'Live location' : 'From ' + o.label) : 'No address set';
+}
+
+// ---------- TODAY ----------
+function groupQuestions() {
+  // unanswered group choices for today (if still upcoming) and tomorrow
+  const out = [];
+  const now = new Date();
+  for (const off of [0, 1]) {
+    const d = E.addDays(now, off), ds = E.ymd(d);
+    const occ = E.occurrences(S, A, d, d, { allGroups: true }).filter(o => o.course.group && !o.cancelled);
+    const sets = {};
+    occ.forEach(o => (sets[o.course.group.set] = sets[o.course.group.set] || []).push(o));
+    for (const setId in sets) {
+      if (A[setId + '|' + ds]) continue;
+      const opts = sets[setId].sort((a, b) => a.start - b.start);
+      if (off === 0 && opts.every(o => o.end < now)) continue;
+      out.push({ setId, ds, d, off, opts });
+    }
+  }
+  return out;
+}
+
+function renderToday() {
+  const now = Date.now(), today = new Date();
+  let html = '';
+  // group questions
+  const qs = groupQuestions();
+  if (qs.length) {
+    html += '<h2>Choose your group</h2><div class="stack">';
+    for (const q of qs) {
+      const dflt = S.groupDefault[q.setId];
+      html += '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="font-size:18px">' + h(E.GROUP_SETS[q.setId].name) + '</h3><span class="pill q">' + (q.off ? 'Tomorrow' : 'Today') + '</span></div>' +
+        '<p class="muted" style="margin:4px 0 10px">' + h(fmtDate(q.d)) + (dflt ? ' · default is group ' + h(dflt) : ' · no default group') + '</p><div class="row">' +
+        q.opts.map(o => '<button class="' + (dflt === o.course.group.option ? 'primary' : '') + '" data-ans="' + h(q.setId + '|' + q.ds + '|' + o.course.group.option) + '">Group ' + h(o.course.group.option) + ' · ' + E.hm(o.start) + '–' + E.hm(o.end) + '</button>').join('') +
+        '</div></div>';
+    }
+    html += '</div>';
+  }
+
+  // next target within 7 days
+  const targets = E.upcomingTargets(S, A, now, 24 * 7);
+  const nx = targets.find(t => t.start.getTime() > now - 0) ;
+  const ongoing = E.occurrences(S, A, today, today).find(o => !o.cancelled && !o.pending && o.start <= today && o.end > today);
+  html += '<h2>' + (ongoing ? 'In class now · next up' : 'Next up') + '</h2>';
+  if (ongoing) {
+    html += '<div class="card" style="margin-bottom:10px"><div class="row" style="justify-content:space-between"><strong>' + h(ongoing.course.title) + '</strong>' + typePill(ongoing.course.type) + '</div><p class="muted mono" style="margin-top:4px">until ' + E.hm(ongoing.end) + ' · ' + h(ongoing.room) + '</p></div>';
+  }
+  if (nx) {
+    const tr = E.travelFor(S, T, LOC, now, nx);
+    const leaveIn = tr ? tr.leaveAt - now : null;
+    const urgent = leaveIn != null && leaveIn < 15 * 60000;
+    const sameDay = E.ymd(nx.start) === E.ymd(today);
+    html += '<div class="card next' + (urgent ? ' urgent' : '') + '">' +
+      '<div class="row" style="justify-content:space-between;align-items:flex-start"><div style="min-width:0"><h3>' + h(nx.occ ? nx.occ.course.title : nx.title) + '</h3>' +
+      '<p class="muted" style="margin-top:3px">' + (nx.occ ? h(nx.occ.course.lecturer) : 'Exam') + '</p></div>' + (nx.occ ? typePill(nx.occ.course.type) : '<span class="pill cx">Exam</span>') + '</div>' +
+      '<div class="when" style="margin-top:12px">' + E.hm(nx.start) + ' <span>' + (sameDay ? 'today' : h(fmtDate(nx.start))) + ' · in ' + dur(nx.start - now) + '</span></div>' +
+      '<p style="margin-top:8px"><strong>' + h(nx.room) + '</strong> · ' + h(nx.place.name) + '</p><p class="mono muted">' + h(coord(nx.place)) + '</p>' +
+      (nx.pending ? '<p class="notice" style="margin-top:10px">Group not chosen yet. Showing the earlier group.</p>' : '') +
+      (nx.occ && nx.occ.changed ? '<p class="notice" style="margin-top:10px">Changed this week' + (nx.occ.note ? ': ' + h(nx.occ.note) : '') + '</p>' : '') +
+      '<dl class="leave">' +
+      (tr ? '<dt>Leave</dt><dd><span class="big">' + E.hm(new Date(tr.leaveAt)) + '</span> <span class="muted">' + (leaveIn > 0 ? 'in ' + dur(leaveIn) : 'now') + '</span></dd>' +
+        '<dt>Travel</dt><dd>' + tr.minutes + ' min · ' + h(tr.lines && tr.lines.length ? tr.lines.join(' → ') : (tr.source === 'bvg' ? 'walk' : 'estimate')) + '</dd>' +
+        '<dt>From</dt><dd>' + h(tr.origin) + (tr.source !== 'bvg' ? ' <span class="muted">(rough estimate)</span>' : '') + '</dd>'
+        : '<dt>Travel</dt><dd>Add your home address in Settings to get leave times.</dd>') +
+      '</dl><div class="row" style="margin-top:12px"><a class="btn ' + (urgent ? 'hot' : 'primary') + '" href="' + h(E.mapsUrl(nx.place)) + '" target="_blank" rel="noopener">Route in Maps</a>' +
+      '<button id="refreshTravel">Refresh travel</button>' + (nx.occ ? '<button data-occ="' + h(nx.occ.id) + '">Details</button>' : '') + '</div></div>';
+  } else {
+    html += '<div class="empty">Nothing in the next 7 days.' + (E.inBreak(E.ymd(today)) ? ' Enjoy the break.' : '') + '</div>';
+  }
+
+  // today's list
+  const list = E.occurrences(S, A, today, today, { allGroups: true });
+  html += '<h2>' + DAYS[today.getDay()] + '</h2>';
+  if (E.inBreak(E.ymd(today))) html += '<div class="empty">Christmas break · lectures resume 4 January.</div>';
+  else if (!list.length) html += '<div class="empty">No classes today.</div>';
+  else {
+    html += '<ul class="tl">' + list.map(o => {
+      const past = o.end.getTime() < now, live = o.start.getTime() <= now && !past;
+      const otherGroup = o.course.group && o.chosen && o.chosen !== o.course.group.option;
+      if (otherGroup) return '';
+      return '<li class="' + (past ? 'past ' : '') + (live ? 'now ' : '') + (o.cancelled ? 'cancel' : '') + '"><button class="occ" data-occ="' + h(o.id) + '"><div><div class="time">' + E.hm(o.start) + '–' + E.hm(o.end) + '</div>' +
+        '<div class="t">' + h(o.course.title) + '</div><div class="mono muted">' + h(o.room) + (o.course.group ? ' · group ' + h(o.course.group.option) : '') + '</div></div>' +
+        '<div class="row" style="justify-content:flex-end">' + typePill(o.course.type) + (o.cancelled ? '<span class="pill cx">Cancelled</span>' : '') + (o.changed ? '<span class="pill chg">Changed</span>' : '') + (o.pending ? '<span class="pill q">Group?</span>' : '') + '</div></button></li>';
+    }).join('') + '</ul>';
+    // lunch gap
+    const real = list.filter(o => !o.cancelled && !(o.course.group && (o.pending ? o.course.group.option !== 'A' : o.chosen !== o.course.group.option)));
+    for (let i = 0; i < real.length - 1; i++) {
+      const gap = real[i + 1].start - real[i].end;
+      const gs = real[i].end, ge = real[i + 1].start;
+      if (gap >= 90 * 60000 && gs.getHours() < 15 && ge.getHours() >= 11) {
+        const walk = E.estimateMinutes(E.placeOf(S, real[i].course), E.BUILDINGS.MENSA);
+        html += '<div class="card row" style="justify-content:space-between;margin-top:4px"><div style="min-width:0"><strong>Free ' + E.hm(gs) + '–' + E.hm(ge) + '</strong><p class="muted">Mensa Hardenbergstraße is about ' + walk + ' min from ' + h(real[i].room) + '.</p></div><a class="btn" href="#mensa">See menu</a></div>';
+        break;
+      }
+    }
+  }
+
+  // exams soon
+  const soon = S.exams.filter(x => x.date && E.parseYmd(x.date) >= E.parseYmd(E.ymd(today)) && E.parseYmd(x.date) - today < 21 * 86400000)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (soon.length) {
+    html += '<h2>Exams in the next 3 weeks</h2><div class="stack">' + soon.map(x => '<div class="card row" style="justify-content:space-between"><div><strong>' + h(x.title) + '</strong><p class="muted mono">' + h(fmtDate(E.parseYmd(x.date))) + ' ' + h(x.time || '') + ' · ' + h(x.room || '') + '</p></div><span class="pill cx">' + h(dur(E.at(x.date, x.time || '09:00') - now)) + '</span></div>').join('') + '</div>';
+  }
+  $('#v-today').innerHTML = html;
+  const rb = $('#refreshTravel'); if (rb) rb.onclick = async () => { rb.disabled = true; rb.textContent = 'Checking BVG…'; T = {}; try { await E.kvSet('travel', {}); } catch (e) {} await runTick(true); };
+}
+
+// ---------- WEEK ----------
+function renderWeek() {
+  const mon = E.addDays(E.mondayOf(new Date()), weekOffset * 7);
+  const fri = E.addDays(mon, 4);
+  const occ = E.occurrences(S, A, mon, fri, { allGroups: true });
+  const todayStr = E.ymd(new Date());
+  let html = '<div class="weeknav"><button class="small" id="wPrev" aria-label="Previous week">←</button><div style="text-align:center"><strong>' + mon.getDate() + '.' + (mon.getMonth() + 1) + '. – ' + fri.getDate() + '.' + (fri.getMonth() + 1) + '.</strong><div class="mono muted">' + (weekOffset === 0 ? 'this week' : (weekOffset > 0 ? '+' : '') + weekOffset + ' week' + (Math.abs(weekOffset) > 1 ? 's' : '')) + '</div></div><button class="small" id="wNext" aria-label="Next week">→</button></div>';
+  if (weekOffset !== 0) html += '<div class="row" style="justify-content:center;margin-top:8px"><button class="small ghost" id="wToday">Back to this week</button></div>';
+  html += '<div class="stack" style="margin-top:14px">';
+  for (let i = 0; i < 5; i++) {
+    const d = E.addDays(mon, i), ds = E.ymd(d);
+    const items = occ.filter(o => o.date === ds);
+    html += '<div class="day' + (ds === todayStr ? ' today' : '') + '"><header><span>' + DAYS[d.getDay()] + '</span><span class="mono">' + d.getDate() + '.' + (d.getMonth() + 1) + '.</span></header>';
+    if (E.inBreak(ds)) html += '<div class="slot" style="cursor:default"><span></span><span class="muted">Christmas break</span></div>';
+    else if (!items.length) html += '<div class="slot" style="cursor:default"><span></span><span class="muted">No classes</span></div>';
+    items.forEach(o => {
+      const other = o.course.group && o.chosen && o.chosen !== o.course.group.option;
+      html += '<button class="slot' + (other || o.cancelled ? ' dim' : '') + '" data-occ="' + h(o.id) + '"><div class="time">' + E.hm(o.start) + '<br><span class="muted">' + E.hm(o.end) + '</span></div><div>' +
+        '<div style="font-weight:600' + (o.cancelled ? ';text-decoration:line-through' : '') + '">' + h(o.course.title) + '</div><div class="mono muted">' + h(o.room) + ' · ' + h(o.course.lecturer) + '</div>' +
+        '<div class="row" style="margin-top:5px">' + typePill(o.course.type) + (o.course.group ? '<span class="pill ' + (o.pending ? 'q' : other ? 'ex' : 'lec') + '">Group ' + h(o.course.group.option) + (o.pending ? '?' : other ? '' : ' ✓') + '</span>' : '') +
+        (o.changed ? '<span class="pill chg">Changed</span>' : '') + (o.cancelled ? '<span class="pill cx">Cancelled</span>' : '') + '</div></div></button>';
+    });
+    html += '</div>';
+  }
+  html += '</div><h2>Your courses</h2><div class="stack">' + S.courses.map(c => '<div class="card row" style="justify-content:space-between;flex-wrap:nowrap"><div style="min-width:0"><strong' + (c.enabled ? '' : ' class="muted"') + '>' + h(c.title) + '</strong><p class="mono muted">' + SHORT[c.day] + ' ' + h(c.start) + '–' + h(c.end) + ' · ' + h(c.room) + (c.group ? ' · grp ' + h(c.group.option) : '') + '</p></div><div class="row" style="flex-wrap:nowrap">' + typePill(c.type) + '<button class="small" data-edit="' + h(c.id) + '">Edit</button></div></div>').join('') +
+    '</div><div class="row" style="margin-top:12px"><button class="primary" id="addCourse">Add a course</button></div>';
+  $('#v-week').innerHTML = html;
+  $('#wPrev').onclick = () => { weekOffset--; renderWeek(); };
+  $('#wNext').onclick = () => { weekOffset++; renderWeek(); };
+  const wt = $('#wToday'); if (wt) wt.onclick = () => { weekOffset = 0; renderWeek(); };
+  $('#addCourse').onclick = () => editCourse(null);
+}
+
+function buildingOptions(sel) {
+  return Object.keys(E.BUILDINGS).filter(k => k !== 'MENSA').map(k => '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + h(E.BUILDINGS[k].name) + '</option>').join('') +
+    '<option value="OTHER"' + (sel === 'OTHER' ? ' selected' : '') + '>Other address…</option>';
+}
+
+function occSheet(occId) {
+  const [cid, ds] = occId.split('|');
+  const crs = S.courses.find(c => c.id === cid); if (!crs) return;
+  const o = E.occurrences(S, A, E.parseYmd(ds), E.parseYmd(ds), { allGroups: true, includeDisabled: true }).find(x => x.id === occId);
+  if (!o) return;
+  const p = E.placeOf(S, crs), ov = S.overrides[occId] || {};
+  let html = '<div class="row" style="justify-content:space-between"><h3>' + h(crs.title) + '</h3>' + typePill(crs.type) + '</div>' +
+    '<p class="muted" style="margin:4px 0 12px">' + h(DAYS[o.start.getDay()]) + ' ' + h(fmtDate(o.start)) + ' · ' + E.hm(o.start) + '–' + E.hm(o.end) + ' · ' + h(crs.lecturer) + '</p>' +
+    '<p><strong>' + h(o.room) + '</strong> · ' + h(p.name) + '</p><p class="mono muted">' + h(p.address || '') + '</p>' +
+    (crs.notes ? '<p style="margin-top:8px">' + h(crs.notes) + '</p>' : '') +
+    '<div class="row" style="margin-top:12px"><a class="btn primary" target="_blank" rel="noopener" href="' + h(E.mapsUrl(p)) + '">Route in Maps</a>' + (crs.link ? '<a class="btn" target="_blank" rel="noopener" href="' + h(crs.link) + '">Course page</a>' : '') + '</div>';
+  if (crs.group) {
+    const cur = A[crs.group.set + '|' + ds];
+    html += '<h2>Group for this day</h2><div class="row">' + ['A', 'B'].map(g => '<button class="' + (cur === g ? 'primary' : '') + '" data-ans="' + h(crs.group.set + '|' + ds + '|' + g) + '">Group ' + g + '</button>').join('') + (cur ? '<button class="ghost" data-ans="' + h(crs.group.set + '|' + ds + '|') + '">Ask me again</button>' : '') + '</div>';
+  }
+  html += '<h2>Only this week</h2><div class="set"><div class="grid2"><label>Room<input id="ovRoom" value="' + h(ov.room || '') + '" placeholder="' + h(crs.room) + '"></label><label>Note<input id="ovNote" value="' + h(ov.note || '') + '" placeholder="optional"></label></div>' +
+    '<div class="grid2"><label>Start<input type="time" id="ovStart" value="' + h(ov.start || crs.start) + '"></label><label>End<input type="time" id="ovEnd" value="' + h(ov.end || crs.end) + '"></label></div>' +
+    '<div class="row"><button class="primary" id="ovSave">Save for this week</button><button class="' + (ov.cancelled ? '' : 'danger') + '" id="ovCancel">' + (ov.cancelled ? 'Restore class' : 'Cancel this week') + '</button>' + (Object.keys(ov).length ? '<button class="ghost" id="ovClear">Clear changes</button>' : '') + '</div></div>' +
+    '<div class="row" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)"><button id="ovEditAll">Edit course for all weeks</button><button class="ghost" id="ovClose">Close</button></div>';
+  openSheet(html, () => {
+    const put = obj => { const cur = Object.assign({}, S.overrides[occId] || {}, obj); Object.keys(cur).forEach(k => { if (cur[k] === '' || cur[k] == null || cur[k] === false) delete cur[k]; }); if (Object.keys(cur).length) S.overrides[occId] = cur; else delete S.overrides[occId]; save(); render(); };
+    $('#ovSave').onclick = () => {
+      const st = $('#ovStart').value, en = $('#ovEnd').value;
+      put({ room: $('#ovRoom').value.trim(), note: $('#ovNote').value.trim(), start: st !== crs.start ? st : '', end: en !== crs.end ? en : '' });
+      closeSheet(); toast('Saved for ' + fmtDate(o.start));
+    };
+    $('#ovCancel').onclick = () => { put({ cancelled: !ov.cancelled }); closeSheet(); toast(ov.cancelled ? 'Class restored' : 'Marked as cancelled for ' + fmtDate(o.start)); };
+    const cl = $('#ovClear'); if (cl) cl.onclick = () => { delete S.overrides[occId]; save(); render(); closeSheet(); toast('Changes cleared'); };
+    $('#ovEditAll').onclick = () => editCourse(cid);
+    $('#ovClose').onclick = closeSheet;
+  });
+}
+
+function editCourse(id) {
+  const isNew = !id;
+  const c = isNew ? { id: 'c' + Date.now().toString(36), title: '', type: 'Lecture', lecturer: '', day: 1, start: '10:00', end: '12:00', room: '', building: 'H', startDate: E.TERM.lectureStart, enabled: true, group: null, notes: '', link: '', address: '', lat: null, lng: null }
+    : JSON.parse(JSON.stringify(S.courses.find(x => x.id === id)));
+  const html = '<h3>' + (isNew ? 'Add a course' : 'Edit course') + '</h3><p class="muted" style="margin:4px 0 14px">Applies to every week. Use a class\'s details for one-week changes.</p><div class="set">' +
+    '<label>Title<input id="cTitle" value="' + h(c.title) + '"></label>' +
+    '<div class="grid2"><label>Type<select id="cType">' + ['Lecture', 'Exercise', 'Project', 'Seminar', 'Other'].map(t => '<option' + (t === c.type ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></label><label>Lecturer<input id="cLect" value="' + h(c.lecturer) + '"></label></div>' +
+    '<div class="grid2"><label>Day<select id="cDay">' + [1, 2, 3, 4, 5, 6].map(d => '<option value="' + d + '"' + (d === c.day ? ' selected' : '') + '>' + DAYS[d] + '</option>').join('') + '</select></label><label>First meeting<input type="date" id="cFirst" value="' + h(c.startDate) + '"></label></div>' +
+    '<div class="grid2"><label>Start<input type="time" id="cStart" value="' + h(c.start) + '"></label><label>End<input type="time" id="cEnd" value="' + h(c.end) + '"></label></div>' +
+    '<div class="grid2"><label>Room<input id="cRoom" value="' + h(c.room) + '"></label><label>Building<select id="cBld">' + buildingOptions(c.building) + '</select></label></div>' +
+    '<div id="cOther" ' + (c.building === 'OTHER' ? '' : 'hidden') + ' class="set"><label>Address<input id="cAddr" value="' + h(c.address) + '" placeholder="Street and number, Berlin"></label><div class="row"><button class="small" id="cFind">Find address</button><span class="mono muted" id="cCoord">' + h(c.lat != null ? c.lat.toFixed(4) + ', ' + c.lng.toFixed(4) : 'not located yet') + '</span></div><div id="cResults" class="stack"></div></div>' +
+    '<div class="grid2"><label>Group set<select id="cSet"><option value="">No groups</option>' + Object.keys(E.GROUP_SETS).map(k => '<option value="' + k + '"' + (c.group && c.group.set === k ? ' selected' : '') + '>' + h(E.GROUP_SETS[k].name) + '</option>').join('') + '</select></label><label>Group<select id="cOpt"><option' + (c.group && c.group.option === 'A' ? ' selected' : '') + '>A</option><option' + (c.group && c.group.option === 'B' ? ' selected' : '') + '>B</option></select></label></div>' +
+    '<label>Link (ISIS, slides)<input id="cLink" type="url" value="' + h(c.link) + '" placeholder="https://isis.tu-berlin.de/…"></label>' +
+    '<label>Notes<textarea id="cNotes" rows="2">' + h(c.notes) + '</textarea></label>' +
+    '<label class="toggle">Show in timetable and send reminders<input type="checkbox" id="cOn"' + (c.enabled ? ' checked' : '') + '></label>' +
+    '<div class="row"><button class="primary" id="cSave">' + (isNew ? 'Add course' : 'Save changes') + '</button><button class="ghost" id="cClose">Close</button>' + (isNew ? '' : '<button class="danger" id="cDel">Delete</button>') + '</div>' +
+    '<div id="cDelConfirm" hidden class="notice row" style="justify-content:space-between">Delete this course for every week?<button class="danger small" id="cDelYes">Delete</button></div></div>';
+  openSheet(html, () => {
+    $('#cBld').onchange = e => { $('#cOther').hidden = e.target.value !== 'OTHER'; };
+    $('#cFind').onclick = () => findAddress($('#cAddr').value, $('#cResults'), r => { c.lat = r.lat; c.lng = r.lng; c.address = $('#cAddr').value; $('#cCoord').textContent = r.lat.toFixed(4) + ', ' + r.lng.toFixed(4); });
+    $('#cClose').onclick = closeSheet;
+    const del = $('#cDel'); if (del) del.onclick = () => { $('#cDelConfirm').hidden = false; };
+    const dy = $('#cDelYes'); if (dy) dy.onclick = () => { S.courses = S.courses.filter(x => x.id !== c.id); save(); render(); closeSheet(); toast('Course deleted'); };
+    $('#cSave').onclick = () => {
+      const title = $('#cTitle').value.trim(); if (!title) { $('#cTitle').focus(); toast('Give the course a title'); return; }
+      Object.assign(c, { title, type: $('#cType').value, lecturer: $('#cLect').value.trim(), day: Number($('#cDay').value), startDate: $('#cFirst').value || E.TERM.lectureStart,
+        start: $('#cStart').value, end: $('#cEnd').value, room: $('#cRoom').value.trim(), building: $('#cBld').value, link: $('#cLink').value.trim(), notes: $('#cNotes').value.trim(), enabled: $('#cOn').checked,
+        group: $('#cSet').value ? { set: $('#cSet').value, option: $('#cOpt').value } : null, address: $('#cAddr').value.trim() });
+      if (c.building === 'OTHER' && c.lat == null) { toast('Tap "Find address" so travel times work'); return; }
+      const i = S.courses.findIndex(x => x.id === c.id); if (i >= 0) S.courses[i] = c; else S.courses.push(c);
+      save(); render(); closeSheet(); toast(isNew ? 'Course added' : 'Course updated'); runTick();
+    };
+  });
+}
+
+async function findAddress(text, box, onPick) {
+  if (!text.trim()) { toast('Type an address first'); return; }
+  box.innerHTML = '<p class="muted">Searching…</p>';
+  try {
+    const res = await E.geocode(text.includes('Berlin') ? text : text + ', Berlin');
+    if (!res.length) { box.innerHTML = '<p class="muted">No match. Try street and house number.</p>'; return; }
+    box.innerHTML = res.map((r, i) => '<button class="result small" data-i="' + i + '">' + h(r.name) + ' <span class="mono muted">' + r.lat.toFixed(4) + ', ' + r.lng.toFixed(4) + '</span></button>').join('');
+    box.querySelectorAll('button').forEach(b => b.onclick = () => { onPick(res[Number(b.dataset.i)]); box.innerHTML = '<p class="muted">Location saved.</p>'; });
+  } catch (e) { box.innerHTML = '<p class="muted">Address search is unreachable (' + h(e.message) + '). Check your connection.</p>'; }
+}
+
+// ---------- EXAMS ----------
+function renderExams() {
+  const today = E.ymd(new Date());
+  const list = S.exams.slice().sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  let html = '<div class="row" style="justify-content:space-between"><h2 style="margin:6px 0">Exams &amp; deadlines</h2><button class="primary small" id="addExam">Add</button></div>';
+  if (!list.length) html += '<div class="empty" style="margin-top:10px">No exams yet. Add dates as they are announced on ISIS or MOSES; reminders follow the same travel rules as classes, plus one the evening before.</div>';
+  else html += '<div class="stack" style="margin-top:10px">' + list.map(x => {
+    const past = x.date < today; const p = E.placeOf(S, x);
+    return '<div class="card"' + (past ? ' style="opacity:.55"' : '') + '><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div style="min-width:0"><strong>' + h(x.title) + '</strong><p class="mono muted">' + h(fmtDate(E.parseYmd(x.date))) + ' ' + h(x.time || '') + ' · ' + h(x.room || 'room tba') + '</p></div>' +
+      '<span class="pill ' + (past ? 'ex' : 'cx') + '">' + (past ? 'Done' : 'in ' + h(dur(E.at(x.date, x.time || '09:00') - Date.now()))) + '</span></div>' + (x.notes ? '<p style="margin-top:6px">' + h(x.notes) + '</p>' : '') +
+      '<div class="row" style="margin-top:10px"><a class="btn small" target="_blank" rel="noopener" href="' + h(E.mapsUrl(p)) + '">Route</a><button class="small" data-exam="' + h(x.id) + '">Edit</button></div></div>';
+  }).join('') + '</div>';
+  $('#v-exams').innerHTML = html;
+  $('#addExam').onclick = () => editExam(null);
+}
+
+function editExam(id) {
+  const isNew = !id;
+  const x = isNew ? { id: 'x' + Date.now().toString(36), title: '', date: '', time: '09:00', duration: 120, room: '', building: 'H', notes: '', address: '', lat: null, lng: null } : JSON.parse(JSON.stringify(S.exams.find(e => e.id === id)));
+  const html = '<h3>' + (isNew ? 'Add exam' : 'Edit exam') + '</h3><div class="set" style="margin-top:12px">' +
+    '<label>Course or title<input id="xTitle" value="' + h(x.title) + '" list="courseNames"><datalist id="courseNames">' + [...new Set(S.courses.map(c => c.title))].map(t => '<option value="' + h(t) + '">').join('') + '</datalist></label>' +
+    '<div class="grid2"><label>Date<input type="date" id="xDate" value="' + h(x.date) + '"></label><label>Start<input type="time" id="xTime" value="' + h(x.time) + '"></label></div>' +
+    '<div class="grid2"><label>Room<input id="xRoom" value="' + h(x.room) + '"></label><label>Building<select id="xBld">' + buildingOptions(x.building) + '</select></label></div>' +
+    '<div id="xOther" ' + (x.building === 'OTHER' ? '' : 'hidden') + ' class="set"><label>Address<input id="xAddr" value="' + h(x.address) + '"></label><div class="row"><button class="small" id="xFind">Find address</button></div><div id="xResults" class="stack"></div></div>' +
+    '<label>Duration (minutes)<input type="number" id="xDur" min="15" step="15" value="' + h(x.duration) + '"></label>' +
+    '<label>Notes<textarea id="xNotes" rows="2" placeholder="Allowed aids, registration deadline…">' + h(x.notes) + '</textarea></label>' +
+    '<div class="row"><button class="primary" id="xSave">Save</button><button class="ghost" id="xClose">Close</button>' + (isNew ? '' : '<button class="danger" id="xDel">Delete</button>') + '</div></div>';
+  openSheet(html, () => {
+    $('#xBld').onchange = e => { $('#xOther').hidden = e.target.value !== 'OTHER'; };
+    $('#xFind').onclick = () => findAddress($('#xAddr').value, $('#xResults'), r => { x.lat = r.lat; x.lng = r.lng; });
+    $('#xClose').onclick = closeSheet;
+    const d = $('#xDel'); if (d) d.onclick = () => { S.exams = S.exams.filter(e => e.id !== x.id); save(); render(); closeSheet(); toast('Exam removed'); };
+    $('#xSave').onclick = () => {
+      Object.assign(x, { title: $('#xTitle').value.trim(), date: $('#xDate').value, time: $('#xTime').value, room: $('#xRoom').value.trim(), building: $('#xBld').value, address: ($('#xAddr').value || '').trim(), duration: Number($('#xDur').value) || 120, notes: $('#xNotes').value.trim() });
+      if (!x.title || !x.date) { toast('Title and date are required'); return; }
+      const i = S.exams.findIndex(e => e.id === x.id); if (i >= 0) S.exams[i] = x; else S.exams.push(x);
+      save(); render(); closeSheet(); toast('Exam saved');
+    };
+  });
+}
+
+// ---------- MENSA ----------
+const STW = 'https://www.stw.berlin/mensen/einrichtungen/technische-universit%C3%A4t-berlin/mensa-tu-hardenbergstra%C3%9Fe.html';
+const OM = 'https://openmensa.org/api/v2';
+async function mensaId() {
+  if (S.settings.mensaId) return S.settings.mensaId;
+  const r = await fetch(OM + '/canteens?near[lat]=52.5097&near[lng]=13.3262&near[dist]=1.5');
+  if (!r.ok) throw new Error('OpenMensa ' + r.status);
+  const list = await r.json();
+  const hit = list.find(c => /hardenberg/i.test(c.name)) || list.find(c => /TU/i.test(c.name));
+  if (!hit) throw new Error('Canteen not found');
+  S.settings.mensaId = hit.id; save();
+  return hit.id;
+}
+async function renderMensa() {
+  let d = E.addDays(new Date(), mensaDay);
+  const ds = E.ymd(d);
+  let html = '<div class="weeknav"><button class="small" id="mPrev" aria-label="Previous day">←</button><div style="text-align:center"><strong>' + DAYS[d.getDay()] + ' ' + d.getDate() + '.' + (d.getMonth() + 1) + '.</strong><div class="mono muted">Mensa TU Hardenbergstraße</div></div><button class="small" id="mNext" aria-label="Next day">→</button></div>' +
+    '<div id="mBody" style="margin-top:14px"><div class="empty">Loading the menu…</div></div>' +
+    '<div class="row" style="margin-top:14px"><a class="btn" target="_blank" rel="noopener" href="' + STW + '">Full menu on stw.berlin</a><a class="btn" target="_blank" rel="noopener" href="' + h(E.mapsUrl(E.BUILDINGS.MENSA)) + '">Route to Mensa</a></div>' +
+    '<p class="muted mono" style="margin-top:10px">Hardenbergstraße 34 · data via OpenMensa</p>';
+  $('#v-mensa').innerHTML = html;
+  $('#mPrev').onclick = () => { mensaDay--; renderMensa(); };
+  $('#mNext').onclick = () => { mensaDay++; renderMensa(); };
+  const body = $('#mBody');
+  try {
+    const id = await mensaId();
+    const r = await fetch(OM + '/canteens/' + id + '/days/' + ds + '/meals');
+    if (r.status === 404) { body.innerHTML = '<div class="empty">No menu for this day. The Mensa may be closed.</div>'; return; }
+    if (!r.ok) throw new Error('OpenMensa ' + r.status);
+    const meals = await r.json();
+    if (!meals.length) { body.innerHTML = '<div class="empty">No menu for this day.</div>'; return; }
+    const cats = {};
+    meals.forEach(m => (cats[m.category || 'Other'] = cats[m.category || 'Other'] || []).push(m));
+    body.innerHTML = '<div class="stack">' + Object.keys(cats).map(cat => '<div class="card"><h2 style="margin:0 0 6px">' + h(cat) + '</h2>' + cats[cat].map(m => {
+      const p = m.prices && (m.prices.students != null ? m.prices.students : m.prices.employees);
+      const veg = (m.notes || []).some(n => /vegan/i.test(n)) ? 'vegan' : (m.notes || []).some(n => /vegetar/i.test(n)) ? 'vegetarian' : '';
+      return '<div class="meal"><div style="min-width:0">' + h(m.name) + (veg ? ' <span class="pill lec">' + veg + '</span>' : '') + '</div><div class="price">' + (p != null ? p.toFixed(2).replace('.', ',') + ' €' : '') + '</div></div>';
+    }).join('') + '</div>').join('') + '</div>';
+  } catch (e) {
+    body.innerHTML = '<div class="empty">Could not load the menu (' + h(e.message) + '). Open the full menu on stw.berlin instead.</div>';
+  }
+}
+
+// ---------- SETTINGS ----------
+function renderSettings() {
+  const st = S.settings;
+  const perm = ('Notification' in window) ? Notification.permission : 'unsupported';
+  const standalone = matchMedia('(display-mode: standalone)').matches;
+  let html = '<h2 style="margin-top:6px">Addresses</h2><div class="stack">' + S.addresses.map((a, i) =>
+    '<div class="card set"><div class="row" style="justify-content:space-between"><label style="flex:1">Name<input id="aLabel' + i + '" value="' + h(a.label) + '"></label>' +
+    '<label class="toggle" style="gap:8px;flex:none;margin-top:16px">Default<input type="radio" name="defAddr" value="' + h(a.id) + '"' + (S.defaultAddress === a.id ? ' checked' : '') + '></label></div>' +
+    '<label>Address<input id="aText' + i + '" value="' + h(a.text) + '" placeholder="Street, number, Berlin"></label>' +
+    '<div class="row"><button class="small" data-find="' + i + '">Find address</button><span class="mono muted">' + (a.lat != null ? a.lat.toFixed(4) + ', ' + a.lng.toFixed(4) : 'not located') + '</span></div><div class="stack" id="aRes' + i + '"></div></div>').join('') + '</div>' +
+
+    '<h2>Location</h2><div class="card set"><label class="toggle">Use my live location when the app is open<input type="checkbox" id="sLoc"' + (st.useLocation ? ' checked' : '') + '></label>' +
+    '<p class="muted">Travel times use your position when it is fresh (under 20 minutes old), otherwise your default address.</p><p class="mono muted" id="locStatus">' + (LOC ? 'Last fix ' + dur(Date.now() - LOC.ts) + ' ago' : 'No location yet') + '</p></div>' +
+
+    '<h2>Reminders</h2><div class="card set"><div class="row" style="justify-content:space-between"><span>Notifications: <strong>' + h(perm) + '</strong></span>' +
+    (perm !== 'granted' && perm !== 'unsupported' ? '<button class="primary small" id="sAllow">Allow notifications</button>' : '<button class="small" id="sTest">Send a test</button>') + '</div>' +
+    '<label class="toggle">Reminders on<input type="checkbox" id="sNotify"' + (st.notify ? ' checked' : '') + '></label>' +
+    '<p class="muted">You get three alerts per class: two before the time you must leave, then a "Leave now" alert at that time.</p>' +
+    '<div class="grid2"><label>First alert (min before leaving)<input type="number" id="sL1" min="5" max="240" value="' + st.leadFirst + '"></label><label>Second alert (min before leaving)<input type="number" id="sL2" min="5" max="180" value="' + st.leadSecond + '"></label></div>' +
+    '<div class="grid2"><label>Stop to room (min)<input type="number" id="sBuf" min="0" max="30" value="' + st.bufferMin + '"></label><label>Ask for groups at<input type="time" id="sAsk" value="' + h(st.groupAskTime) + '"></label></div>' +
+    (!standalone ? '<p class="notice">Install the app (browser menu → Add to Home screen) so Android can check reminders in the background.</p>' : '') +
+    '<p class="muted">For alerts that never miss, also export your timetable to Samsung Calendar below. Those alarms use the travel time from your default address.</p></div>' +
+
+    '<h2>Default groups</h2><div class="card set"><p class="muted">Used when you don\'t answer the evening question. You can still change any day.</p>' +
+    Object.keys(E.GROUP_SETS).map(k => '<label>' + h(E.GROUP_SETS[k].name) + '<select data-gdef="' + k + '"><option value="">Ask every time</option><option' + (S.groupDefault[k] === 'A' ? ' selected' : '') + '>A</option><option' + (S.groupDefault[k] === 'B' ? ' selected' : '') + '>B</option></select></label>').join('') + '</div>' +
+
+    '<h2>Calendar &amp; backup</h2><div class="card set"><button class="primary" id="sIcs">Export to calendar (.ics)</button><p class="muted" id="icsNote">Creates the rest of the term with three alarms per class. Re-export after you change the timetable.</p>' +
+    '<div class="row"><button id="sBackup">Save backup</button><label class="btn" style="text-transform:none;letter-spacing:0;font:600 14px/1 var(--f-body);color:var(--ink)">Restore backup<input type="file" id="sRestore" accept="application/json,.json" hidden></label></div>' +
+    '<div class="row"><button class="danger small" id="sReset">Reset timetable to the PDF</button></div><div id="resetConfirm" class="notice row" hidden style="justify-content:space-between">Replace all courses and one-week changes with the original timetable? Exams and addresses stay.<button class="danger small" id="sResetYes">Reset</button></div></div>' +
+
+    '<h2>About</h2><div class="card"><p class="mono muted">' + h(E.TERM.name) + ' · lectures ' + h(E.TERM.lectureStart) + ' – ' + h(E.TERM.lectureEnd) + ' · break 21.12.–02.01.</p>' +
+    '<p class="muted" style="margin-top:6px">Transit: BVG via transport.rest · Menu: OpenMensa · Building coordinates are approximate; Maps routes to the address.</p>' + (idbOK ? '' : '<p class="notice" style="margin-top:8px">Storage is blocked in this browser, so changes will not be kept.</p>') + '</div>';
+  $('#v-settings').innerHTML = html;
+
+  S.addresses.forEach((a, i) => {
+    $('#aLabel' + i).onchange = e => { a.label = e.target.value.trim() || 'Address ' + (i + 1); save(); renderHeader(); };
+    $('#aText' + i).onchange = e => { a.text = e.target.value.trim(); save(); };
+  });
+  document.querySelectorAll('[data-find]').forEach(b => b.onclick = () => {
+    const i = Number(b.dataset.find), a = S.addresses[i];
+    a.text = $('#aText' + i).value.trim();
+    findAddress(a.text, $('#aRes' + i), r => { a.lat = r.lat; a.lng = r.lng; save(); T = {}; E.kvSet('travel', {}).catch(() => {}); renderSettings(); renderHeader(); toast(a.label + ' saved'); runTick(true); });
+  });
+  document.querySelectorAll('input[name="defAddr"]').forEach(r => r.onchange = () => { S.defaultAddress = r.value; save(); renderHeader(); runTick(true); });
+  $('#sLoc').onchange = e => { st.useLocation = e.target.checked; save(); startLocation(); renderHeader(); };
+  $('#sNotify').onchange = e => { st.notify = e.target.checked; save(); };
+  const num = (id, key, min) => { $(id).onchange = e => { st[key] = Math.max(min, Number(e.target.value) || 0); save(); }; };
+  num('#sL1', 'leadFirst', 1); num('#sL2', 'leadSecond', 1); num('#sBuf', 'bufferMin', 0);
+  $('#sAsk').onchange = e => { st.groupAskTime = e.target.value || '19:00'; save(); };
+  document.querySelectorAll('[data-gdef]').forEach(s => s.onchange = () => { if (s.value) S.groupDefault[s.dataset.gdef] = s.value; else delete S.groupDefault[s.dataset.gdef]; save(); render(); });
+  const al = $('#sAllow'); if (al) al.onclick = enableNotifications;
+  const ts = $('#sTest'); if (ts) ts.onclick = () => showNote({ title: 'Leave now · Test', body: 'This is how a "Leave now" alert looks.', tag: 'test', urgent: true });
+  $('#sIcs').onclick = exportIcs;
+  $('#sBackup').onclick = () => shareOrDownload('ggs-timetable-backup.json', JSON.stringify({ state: S, answers: A }, null, 2), 'application/json');
+  $('#sRestore').onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try { const j = JSON.parse(await f.text()); if (!j.state || !j.state.courses) throw new Error('not a backup file');
+      S = E.migrate(j.state); A = j.answers || {}; await save(); await E.kvSet('answers', A); render(); toast('Backup restored');
+    } catch (err) { toast('Could not restore: ' + err.message, 4500); }
+  };
+  $('#sReset').onclick = () => { $('#resetConfirm').hidden = false; };
+  $('#sResetYes').onclick = () => { S.courses = JSON.parse(JSON.stringify(E.SEED_COURSES)); S.overrides = {}; save(); render(); toast('Timetable reset'); };
+}
+
+async function exportIcs() {
+  const note = $('#icsNote'), btn = $('#sIcs');
+  const a = S.addresses.find(x => x.id === S.defaultAddress);
+  if (!a || a.lat == null) { toast('Set and locate your default address first'); return; }
+  btn.disabled = true;
+  const from = { lat: a.lat, lng: a.lng, label: a.label };
+  const keys = new Set(S.courses.filter(c => c.enabled).map(c => c.building === 'OTHER' ? 'OTHER:' + c.id : c.building));
+  S.exams.forEach(x => keys.add(x.building === 'OTHER' ? 'exam:' + x.id : x.building));
+  const tm = {}; let i = 0, est = 0;
+  const probe = E.addDays(E.mondayOf(new Date()), 7 + 1); probe.setHours(10, 0, 0, 0); // a Tuesday 10:00 next week
+  for (const k of keys) {
+    i++; note.textContent = 'Checking travel times ' + i + '/' + keys.size + '…';
+    let place;
+    if (k.startsWith('OTHER:')) place = E.placeOf(S, S.courses.find(c => 'OTHER:' + c.id === k));
+    else if (k.startsWith('exam:')) place = E.placeOf(S, S.exams.find(x => 'exam:' + x.id === k));
+    else place = E.BUILDINGS[k];
+    if (!place || place.lat == null) continue;
+    try { tm[k] = (await E.bvgJourney(from, place, probe)).minutes; } catch (e) { tm[k] = E.estimateMinutes(from, place); est++; }
+  }
+  const res = E.buildICS(S, A, tm, new Date());
+  btn.disabled = false;
+  note.textContent = 'Done.' + (res.skipped ? ' ' + res.skipped + ' group classes without a chosen or default group were left out.' : '') + (est ? ' ' + est + ' travel times are estimates.' : '');
+  await shareOrDownload('tu-ggs-timetable.ics', res.text, 'text/calendar');
+}
+
+// ---------- notifications & location ----------
+async function showNote(a) {
+  if (('Notification' in window) && Notification.permission === 'granted' && swReg) {
+    try { await swReg.showNotification(a.title, { body: a.body, tag: a.tag, renotify: true, requireInteraction: !!a.urgent || !!a.actions, icon: 'icon-192.png', badge: 'icon-192.png', vibrate: a.urgent ? [300, 150, 300, 150, 300] : [200], actions: a.actions || [], data: { url: a.url || './' } }); return; } catch (e) {}
+  }
+  toast(a.title + ' — ' + a.body, 7000);
+}
+async function enableNotifications() {
+  if (!('Notification' in window)) { toast('This browser has no notifications'); return; }
+  const p = await Notification.requestPermission();
+  if (p === 'granted') {
+    toast('Notifications on');
+    try { if (swReg && 'periodicSync' in swReg) { const st = await navigator.permissions.query({ name: 'periodic-background-sync' }); if (st.state === 'granted') await swReg.periodicSync.register('reminders', { minInterval: 15 * 60000 }); } } catch (e) {}
+  } else toast('Notifications are blocked. Allow them in Android settings for this app.', 5000);
+  renderSettings();
+}
+let watchId = null;
+function startLocation() {
+  if (watchId != null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  if (!S.settings.useLocation || !('geolocation' in navigator)) return;
+  watchId = navigator.geolocation.watchPosition(p => {
+    const prev = LOC;
+    LOC = { lat: p.coords.latitude, lng: p.coords.longitude, ts: Date.now() };
+    E.kvSet('loc', LOC).catch(() => {});
+    const moved = !prev || Math.abs(prev.lat - LOC.lat) + Math.abs(prev.lng - LOC.lng) > 0.004;
+    renderHeader(); if (moved) runTick();
+  }, () => { renderHeader(); }, { enableHighAccuracy: false, maximumAge: 120000, timeout: 20000 });
+}
+let ticking = false;
+async function runTick(force) {
+  if (ticking) return; ticking = true;
+  try { await E.tick(showNote, LOC); await reloadShared(); } catch (e) {}
+  ticking = false;
+  if (view === 'today' || force) renderToday();
+}
+
+// ---------- routing & events ----------
+function render() {
+  renderHeader();
+  if (view === 'today') renderToday(); else if (view === 'week') renderWeek(); else if (view === 'exams') renderExams(); else if (view === 'mensa') renderMensa(); else renderSettings();
+}
+function route() {
+  const hsh = location.hash.replace('#', '');
+  view = ({ today: 'today', week: 'week', exams: 'exams', mensa: 'mensa', prefs: 'settings' })[hsh] || 'today';
+  ['today', 'week', 'exams', 'mensa', 'settings'].forEach(v => { $('#v-' + v).hidden = v !== view; });
+  document.querySelectorAll('nav.tabs a').forEach(a => { if (a.dataset.v === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  closeSheet(); render(); window.scrollTo(0, 0);
+}
+document.addEventListener('click', e => {
+  const ans = e.target.closest('[data-ans]'); if (ans) { const [s, d, o] = ans.dataset.ans.split('|'); answer(s, d, o || null); closeSheet(); toast(o ? 'Group ' + o + ' for ' + fmtDate(E.parseYmd(d)) : 'You will be asked again'); return; }
+  const oc = e.target.closest('[data-occ]'); if (oc) { occSheet(oc.dataset.occ); return; }
+  const ed = e.target.closest('[data-edit]'); if (ed) { editCourse(ed.dataset.edit); return; }
+  const ex = e.target.closest('[data-exam]'); if (ex) { editExam(ex.dataset.exam); return; }
+});
+window.addEventListener('hashchange', route);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { reloadShared().then(() => { render(); runTick(); }); } });
+
+(async function boot() {
+  try { const all = await E.loadAll(); S = all.state; A = all.answers; T = all.travel; LOC = all.loc; await save(); } catch (e) { idbOK = false; }
+  if ('serviceWorker' in navigator) {
+    try {
+      swReg = await navigator.serviceWorker.register('sw.js');
+      navigator.serviceWorker.addEventListener('message', ev => {
+        if (ev.data && ev.data.type === 'answers-changed') reloadShared().then(render);
+        if (ev.data && ev.data.type === 'open') location.hash = ev.data.hash;
+      });
+      if ('periodicSync' in swReg && Notification.permission === 'granted') {
+        const st = await navigator.permissions.query({ name: 'periodic-background-sync' }).catch(() => null);
+        if (st && st.state === 'granted') swReg.periodicSync.register('reminders', { minInterval: 15 * 60000 }).catch(() => {});
+      }
+    } catch (e) {}
+  }
+  route(); startLocation(); runTick();
+  setInterval(() => { if (!document.hidden) runTick(); }, 30000);
+})();
+</script>
+</body>
+</html>
