@@ -1,8 +1,8 @@
 /* Service worker: offline cache, background reminder checks, notification buttons. */
 importScripts('./engine.js');
 
-const CACHE = 'tu-timetable-v5';
-const SHELL = ['./', './index.html', './engine.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
+const CACHE = 'tu-timetable-v6';
+const SHELL = ['./', './index.html', './engine.js', './manifest.webmanifest', './app-192.png', './app-512.png', './badge-96.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -25,7 +25,7 @@ self.addEventListener('fetch', e => {
 function show(a) {
   return self.registration.showNotification(a.title, {
     body: a.body, tag: a.tag, renotify: true, requireInteraction: !!a.urgent || !!a.actions,
-    icon: './icon-192.png', badge: './icon-192.png', vibrate: a.urgent ? [300, 150, 300, 150, 300] : [200],
+    icon: './app-192.png', badge: './badge-96.png', vibrate: a.urgent ? [300, 150, 300, 150, 300] : [200],
     actions: a.actions || [], data: { url: a.url || './' }
   });
 }

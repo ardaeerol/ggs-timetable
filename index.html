@@ -6,8 +6,8 @@
 <title>GGS Timetable</title>
 <meta name="theme-color" content="#12676A">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="app-192.png">
+<link rel="apple-touch-icon" href="app-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -681,7 +681,7 @@ async function exportIcs() {
 // ---------- notifications & location ----------
 async function showNote(a) {
   if (('Notification' in window) && Notification.permission === 'granted' && swReg) {
-    try { await swReg.showNotification(a.title, { body: a.body, tag: a.tag, renotify: true, requireInteraction: !!a.urgent || !!a.actions, icon: 'icon-192.png', badge: 'icon-192.png', vibrate: a.urgent ? [300, 150, 300, 150, 300] : [200], actions: a.actions || [], data: { url: a.url || './' } }); return; } catch (e) {}
+    try { await swReg.showNotification(a.title, { body: a.body, tag: a.tag, renotify: true, requireInteraction: !!a.urgent || !!a.actions, icon: 'app-192.png', badge: 'badge-96.png', vibrate: a.urgent ? [300, 150, 300, 150, 300] : [200], actions: a.actions || [], data: { url: a.url || './' } }); return; } catch (e) {}
   }
   toast(a.title + ' — ' + a.body, 7000);
 }
