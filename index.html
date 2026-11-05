@@ -107,6 +107,8 @@ input,select,textarea{font:15px/1.3 var(--f-body);color:var(--ink);background:va
 /* Mensa */
 .meal{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
 .meal:first-child{border-top:0}
+.dish{width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);border-radius:0;min-height:0;font:inherit;color:inherit;cursor:pointer;padding:9px 0}
+.card h2+.dish{border-top:0}
 .meal .price{font:500 13px/1.3 var(--f-mono);white-space:nowrap;font-variant-numeric:tabular-nums}
 /* Nav */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);
@@ -494,6 +496,61 @@ async function mensaId() {
   S.settings.mensaId = hit.id; save();
   return hit.id;
 }
+// ---------- dish translation ----------
+const CAT_EN = { 'Essen': 'Mains', 'Hauptgerichte': 'Mains', 'Beilagen': 'Sides', 'Salate': 'Salads', 'Suppen': 'Soups', 'Desserts': 'Desserts', 'Vorspeisen': 'Starters', 'Aktionen': 'Specials', 'Aktion': 'Specials', 'Tagesgericht': "Today's dish", 'Pasta': 'Pasta', 'Pizza': 'Pizza', 'Grill': 'Grill', 'Snacks': 'Snacks' };
+function catName(c) { return CAT_EN[c] || c; }
+const trMem = {};
+function trCacheGet(k) { if (k in trMem) return trMem[k]; try { const v = localStorage.getItem(k); if (v != null) trMem[k] = v; return v; } catch (e) { return null; } }
+function trCacheSet(k, v) { trMem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} }
+const translators = {};
+async function translate(text, to) {
+  if (!text) return null;
+  const key = 'tr:' + to + ':' + text;
+  const hit = trCacheGet(key); if (hit) return hit;
+  let out = null;
+  // 1) Chrome's on-device translator, where the phone has it
+  try {
+    if ('Translator' in self) {
+      const av = await self.Translator.availability({ sourceLanguage: 'de', targetLanguage: to });
+      if (av === 'available') {
+        translators[to] = translators[to] || self.Translator.create({ sourceLanguage: 'de', targetLanguage: to });
+        out = await (await translators[to]).translate(text);
+      }
+    }
+  } catch (e) { out = null; }
+  // 2) MyMemory free translation service
+  if (!out) {
+    try {
+      const r = await fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=de|' + to);
+      if (r.ok) {
+        const j = await r.json();
+        const t = j && j.responseData && j.responseData.translatedText;
+        if (t && j.responseStatus == 200 && !/MYMEMORY WARNING|QUERY LENGTH LIMIT/i.test(t)) out = t;
+      }
+    } catch (e) { out = null; }
+  }
+  if (out) { out = out.trim(); trCacheSet(key, out); }
+  return out;
+}
+async function runLimited(tasks, limit) {
+  let i = 0;
+  const worker = async () => { while (i < tasks.length) { const t = tasks[i++]; try { await t(); } catch (e) {} } };
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
+}
+async function cycleDish(b) {
+  const order = ['en', 'tr', 'de'];
+  const next = (Number(b.dataset.l) + 1) % 3;
+  b.dataset.l = String(next);
+  const lang = order[next];
+  const name = b.querySelector('.dname'), tag = b.querySelector('.dlang');
+  if (lang === 'de') { name.textContent = b.dataset.de; tag.textContent = 'DE'; return; }
+  tag.textContent = '…';
+  const t = await translate(b.dataset.de, lang);
+  if (b.dataset.l !== String(next)) return; // tapped again meanwhile
+  if (t) { name.textContent = t; tag.textContent = lang.toUpperCase(); }
+  else { name.textContent = b.dataset.de; tag.textContent = 'DE'; toast('Translation is unavailable right now. Showing German.'); }
+}
+
 async function renderMensa() {
   let d = E.addDays(new Date(), mensaDay);
   const ds = E.ymd(d);
@@ -514,11 +571,19 @@ async function renderMensa() {
     if (!meals.length) { body.innerHTML = '<div class="empty">No menu for this day.</div>'; return; }
     const cats = {};
     meals.forEach(m => (cats[m.category || 'Other'] = cats[m.category || 'Other'] || []).push(m));
-    body.innerHTML = '<div class="stack">' + Object.keys(cats).map(cat => '<div class="card"><h2 style="margin:0 0 6px">' + h(cat) + '</h2>' + cats[cat].map(m => {
+    let n = 0;
+    body.innerHTML = '<p class="muted" style="margin-bottom:10px">Tap a dish to see it in Turkish, tap again for German.</p><div class="stack">' + Object.keys(cats).map(cat => '<div class="card"><h2 style="margin:0 0 6px">' + h(catName(cat)) + '</h2>' + cats[cat].map(m => {
       const p = m.prices && (m.prices.students != null ? m.prices.students : m.prices.employees);
-      const veg = (m.notes || []).some(n => /vegan/i.test(n)) ? 'vegan' : (m.notes || []).some(n => /vegetar/i.test(n)) ? 'vegetarian' : '';
-      return '<div class="meal"><div style="min-width:0">' + h(m.name) + (veg ? ' <span class="pill lec">' + veg + '</span>' : '') + '</div><div class="price">' + (p != null ? p.toFixed(2).replace('.', ',') + ' €' : '') + '</div></div>';
+      const veg = (m.notes || []).some(x => /vegan/i.test(x)) ? 'vegan' : (m.notes || []).some(x => /vegetar/i.test(x)) ? 'vegetarian' : '';
+      const i = n++;
+      return '<button class="meal dish" data-dish="' + i + '" data-de="' + h(m.name) + '" data-l="0" aria-label="Change language"><div style="min-width:0"><span class="dname">' + h(m.name) + '</span> <span class="pill ex dlang">DE</span>' + (veg ? ' <span class="pill lec">' + veg + '</span>' : '') + '</div><div class="price">' + (p != null ? p.toFixed(2).replace('.', ',') + ' €' : '') + '</div></button>';
     }).join('') + '</div>').join('') + '</div>';
+    // English first: translate every dish, update in place as results arrive
+    const dishes = [...body.querySelectorAll('.dish')];
+    await runLimited(dishes.map(b => async () => {
+      const en = await translate(b.dataset.de, 'en');
+      if (en && b.isConnected && b.dataset.l === '0') { b.querySelector('.dname').textContent = en; b.querySelector('.dlang').textContent = 'EN'; }
+    }), 3);
   } catch (e) {
     body.innerHTML = '<div class="empty">Could not load the menu (' + h(e.message) + '). Open the full menu on stw.berlin instead.</div>';
   }
@@ -663,6 +728,7 @@ function route() {
 }
 document.addEventListener('click', e => {
   const ans = e.target.closest('[data-ans]'); if (ans) { const [s, d, o] = ans.dataset.ans.split('|'); answer(s, d, o || null); closeSheet(); toast(o ? 'Group ' + o + ' for ' + fmtDate(E.parseYmd(d)) : 'You will be asked again'); return; }
+  const dish = e.target.closest('[data-dish]'); if (dish) { cycleDish(dish); return; }
   const oc = e.target.closest('[data-occ]'); if (oc) { occSheet(oc.dataset.occ); return; }
   const ed = e.target.closest('[data-edit]'); if (ed) { editCourse(ed.dataset.edit); return; }
   const ex = e.target.closest('[data-exam]'); if (ex) { editExam(ex.dataset.exam); return; }
