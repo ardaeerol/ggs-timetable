@@ -1,15 +1,20 @@
 {
+  "id": "/ggs-timetable/",
   "name": "GGS Timetable",
   "short_name": "GGS",
   "description": "TU Berlin MSc Geodesy & Geoinformation Science timetable with transit-based reminders",
-  "start_url": "./#today",
-  "scope": "./",
+  "lang": "en",
+  "start_url": "/ggs-timetable/",
+  "scope": "/ggs-timetable/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#F2F4F1",
   "theme_color": "#12676A",
+  "prefer_related_applications": false,
   "icons": [
-    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
-    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
   ]
 }

@@ -1,7 +1,7 @@
 /* Service worker: offline cache, background reminder checks, notification buttons. */
 importScripts('./engine.js');
 
-const CACHE = 'tu-timetable-v3';
+const CACHE = 'tu-timetable-v4';
 const SHELL = ['./', './index.html', './engine.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
