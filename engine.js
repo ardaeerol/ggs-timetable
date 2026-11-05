@@ -11,19 +11,21 @@
     breaks: [{ from: '2026-12-21', to: '2027-01-02', label: 'Christmas break' }]
   };
 
-  // ---------- Places (approximate coordinates; editable addresses) ----------
+  // ---------- Places ----------
+  // Addresses from the TU Berlin Campus Charlottenburg plan. Coordinates are approximate and only
+  // feed the BVG travel time; Google Maps is routed by `maps` (building name + address).
   const BUILDINGS = {
-    A:   { name: 'Architecture building (A)', address: 'Straße des 17. Juni 152, 10623 Berlin', lat: 52.5137, lng: 13.3247 },
-    EB:  { name: 'Erweiterungsbau (EB)', address: 'Straße des 17. Juni 145, 10623 Berlin', lat: 52.5130, lng: 13.3283 },
-    MAR: { name: 'Marchstraße building (MAR)', address: 'Marchstraße 23, 10587 Berlin', lat: 52.5166, lng: 13.3237 },
-    FH:  { name: 'Fraunhofer building (FH)', address: 'Fraunhoferstraße 33-36, 10587 Berlin', lat: 52.5161, lng: 13.3215 },
-    KAI: { name: 'KAI building', address: 'Kaiserin-Augusta-Allee 104, 10553 Berlin', lat: 52.5257, lng: 13.3192 },
-    PTZ: { name: 'Production Technology Center (PTZ)', address: 'Pascalstraße 8-9, 10587 Berlin', lat: 52.5195, lng: 13.3215 },
-    PC:  { name: 'Physical Chemistry building (PC)', address: 'Straße des 17. Juni 124, 10623 Berlin', lat: 52.5127, lng: 13.3236 },
-    HFT: { name: 'Hochfrequenztechnik building (HFT)', address: 'Einsteinufer 25, 10587 Berlin', lat: 52.5174, lng: 13.3228 },
-    MA:  { name: 'Mathematics building (MA)', address: 'Straße des 17. Juni 136, 10623 Berlin', lat: 52.5122, lng: 13.3265 },
-    H:   { name: 'Main building (H)', address: 'Straße des 17. Juni 135, 10623 Berlin', lat: 52.5125, lng: 13.3269 },
-    MENSA: { name: 'Mensa TU Hardenbergstraße', address: 'Hardenbergstraße 34, 10623 Berlin', lat: 52.5097, lng: 13.3262 }
+    A:   { name: 'Architecture building (A)', address: 'Straße des 17. Juni 152, 10623 Berlin', maps: 'TU Berlin Architekturgebäude, Straße des 17. Juni 152, 10623 Berlin', lat: 52.5137, lng: 13.3240 },
+    EB:  { name: 'Erweiterungsbau (EB)', address: 'Straße des 17. Juni 145, 10623 Berlin', maps: 'TU Berlin Erweiterungsbau EB, Straße des 17. Juni 145, 10623 Berlin', lat: 52.5131, lng: 13.3275 },
+    MAR: { name: 'Marchstraße building (MAR)', address: 'Marchstraße 23, 10587 Berlin', maps: 'TU Berlin MAR, Marchstraße 23, 10587 Berlin', lat: 52.5166, lng: 13.3237 },
+    FH:  { name: 'Fraunhofer building (FH)', address: 'Fraunhoferstraße 33-36, 10587 Berlin', maps: 'TU Berlin FH, Fraunhoferstraße 33-36, 10587 Berlin', lat: 52.5161, lng: 13.3215 },
+    KAI: { name: 'KAI building', address: 'Kaiserin-Augusta-Allee 104, 10553 Berlin', maps: 'TU Berlin KAI, Kaiserin-Augusta-Allee 104, 10553 Berlin', lat: 52.5257, lng: 13.3192 },
+    PTZ: { name: 'Production Technology Center (PTZ)', address: 'Pascalstraße 8-9, 10587 Berlin', maps: 'Produktionstechnisches Zentrum TU Berlin, Pascalstraße 8-9, 10587 Berlin', lat: 52.5195, lng: 13.3215 },
+    PC:  { name: 'Physical Chemistry building (PC)', address: 'Straße des 17. Juni 135, 10623 Berlin', maps: 'TU Berlin Physikalische Chemie PC, Straße des 17. Juni 135, 10623 Berlin', lat: 52.5122, lng: 13.3258 },
+    HFT: { name: 'Hochfrequenztechnik building (HFT)', address: 'Einsteinufer 25, 10587 Berlin', maps: 'TU Berlin Hochfrequenztechnik HFT, Einsteinufer 25, 10587 Berlin', lat: 52.5174, lng: 13.3228 },
+    MA:  { name: 'Mathematics building (MA)', address: 'Straße des 17. Juni 136, 10623 Berlin', maps: 'TU Berlin Mathematikgebäude, Straße des 17. Juni 136, 10623 Berlin', lat: 52.5133, lng: 13.3262 },
+    H:   { name: 'Main building (H)', address: 'Straße des 17. Juni 135, 10623 Berlin', maps: 'TU Berlin Hauptgebäude, Straße des 17. Juni 135, 10623 Berlin', lat: 52.5125, lng: 13.3269 },
+    MENSA: { name: 'Mensa TU Hardenbergstraße', address: 'Hardenbergstraße 34, 10623 Berlin', maps: 'Mensa TU Hardenbergstraße, Hardenbergstraße 34, 10623 Berlin', lat: 52.5097, lng: 13.3262 }
   };
 
   const GROUP_SETS = {
@@ -413,8 +415,9 @@
   }
 
   function mapsUrl(place) {
-    const dest = place.lat != null ? place.lat + ',' + place.lng : encodeURIComponent(place.address || place.name);
-    return 'https://www.google.com/maps/dir/?api=1&destination=' + dest + '&travelmode=transit';
+    // Route by name + address so Google picks the building, not the nearest parking lot to a coordinate.
+    const q = place.maps || place.address || (place.lat != null ? place.lat + ',' + place.lng : place.name);
+    return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(q) + '&travelmode=transit';
   }
 
   root.Engine = {
