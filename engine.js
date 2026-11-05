@@ -414,10 +414,11 @@
     return { text: folded.join('\r\n') + '\r\n', skipped };
   }
 
-  function mapsUrl(place) {
+  // from: address text or "lat,lng"; omitted = Google starts at the phone's current location.
+  function mapsUrl(place, from) {
     // Route by name + address so Google picks the building, not the nearest parking lot to a coordinate.
     const q = place.maps || place.address || (place.lat != null ? place.lat + ',' + place.lng : place.name);
-    return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(q) + '&travelmode=transit';
+    return 'https://www.google.com/maps/dir/?api=1' + (from ? '&origin=' + encodeURIComponent(from) : '') + '&destination=' + encodeURIComponent(q) + '&travelmode=transit';
   }
 
   root.Engine = {

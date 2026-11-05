@@ -186,6 +186,13 @@ function fmtDate(d) { return SHORT[d.getDay()] + ' ' + d.getDate() + '.' + (d.ge
 function coord(p) { return p.lat == null ? '' : p.lat.toFixed(4) + '° N · ' + p.lng.toFixed(4) + '° E'; }
 function typePill(t) { return '<span class="pill ' + (t === 'Lecture' ? 'lec' : 'ex') + '">' + h(t || 'Class') + '</span>'; }
 function origin() { return E.currentOrigin(S, LOC, Date.now()); }
+// Start the Maps route where the app measures travel from: live location, or else the default address.
+function mapsLink(place) {
+  const o = origin();
+  let from = null;
+  if (o && o.kind === 'address') { const a = S.addresses.find(x => x.id === S.defaultAddress); from = (a && a.text) || (o.lat + ',' + o.lng); }
+  return E.mapsUrl(place, from);
+}
 function openSheet(html, onMount) {
   const host = $('#sheetHost');
   host.innerHTML = '<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>' + html + '</div></div>';
@@ -273,7 +280,7 @@ function renderToday() {
         '<dt>Travel</dt><dd>' + tr.minutes + ' min · ' + h(tr.lines && tr.lines.length ? tr.lines.join(' → ') : (tr.source === 'bvg' ? 'walk' : 'estimate')) + '</dd>' +
         '<dt>From</dt><dd>' + h(tr.origin) + (tr.source !== 'bvg' ? ' <span class="muted">(rough estimate)</span>' : '') + '</dd>'
         : '<dt>Travel</dt><dd>Add your home address in Settings to get leave times.</dd>') +
-      '</dl><div class="row" style="margin-top:12px"><a class="btn ' + (urgent ? 'hot' : 'primary') + '" href="' + h(E.mapsUrl(nx.place)) + '" target="_blank" rel="noopener">Route in Maps</a>' +
+      '</dl><div class="row" style="margin-top:12px"><a class="btn ' + (urgent ? 'hot' : 'primary') + '" href="' + h(mapsLink(nx.place)) + '" target="_blank" rel="noopener">Route in Maps</a>' +
       '<button id="refreshTravel">Refresh travel</button>' + (nx.occ ? '<button data-occ="' + h(nx.occ.id) + '">Details</button>' : '') + '</div></div>';
   } else {
     html += '<div class="empty">Nothing in the next 7 days.' + (E.inBreak(E.ymd(today)) ? ' Enjoy the break.' : '') + '</div>';
@@ -364,7 +371,7 @@ function occSheet(occId) {
     '<p class="muted" style="margin:4px 0 12px">' + h(DAYS[o.start.getDay()]) + ' ' + h(fmtDate(o.start)) + ' · ' + E.hm(o.start) + '–' + E.hm(o.end) + ' · ' + h(crs.lecturer) + '</p>' +
     '<p><strong>' + h(o.room) + '</strong> · ' + h(p.name) + '</p><p class="mono muted">' + h(p.address || '') + '</p>' +
     (crs.notes ? '<p style="margin-top:8px">' + h(crs.notes) + '</p>' : '') +
-    '<div class="row" style="margin-top:12px"><a class="btn primary" target="_blank" rel="noopener" href="' + h(E.mapsUrl(p)) + '">Route in Maps</a>' + (crs.link ? '<a class="btn" target="_blank" rel="noopener" href="' + h(crs.link) + '">Course page</a>' : '') + '</div>';
+    '<div class="row" style="margin-top:12px"><a class="btn primary" target="_blank" rel="noopener" href="' + h(mapsLink(p)) + '">Route in Maps</a>' + (crs.link ? '<a class="btn" target="_blank" rel="noopener" href="' + h(crs.link) + '">Course page</a>' : '') + '</div>';
   if (crs.group) {
     const cur = A[crs.group.set + '|' + ds];
     html += '<h2>Group for this day</h2><div class="row">' + ['A', 'B'].map(g => '<button class="' + (cur === g ? 'primary' : '') + '" data-ans="' + h(crs.group.set + '|' + ds + '|' + g) + '">Group ' + g + '</button>').join('') + (cur ? '<button class="ghost" data-ans="' + h(crs.group.set + '|' + ds + '|') + '">Ask me again</button>' : '') + '</div>';
@@ -443,7 +450,7 @@ function renderExams() {
     const past = x.date < today; const p = E.placeOf(S, x);
     return '<div class="card"' + (past ? ' style="opacity:.55"' : '') + '><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div style="min-width:0"><strong>' + h(x.title) + '</strong><p class="mono muted">' + h(fmtDate(E.parseYmd(x.date))) + ' ' + h(x.time || '') + ' · ' + h(x.room || 'room tba') + '</p></div>' +
       '<span class="pill ' + (past ? 'ex' : 'cx') + '">' + (past ? 'Done' : 'in ' + h(dur(E.at(x.date, x.time || '09:00') - Date.now()))) + '</span></div>' + (x.notes ? '<p style="margin-top:6px">' + h(x.notes) + '</p>' : '') +
-      '<div class="row" style="margin-top:10px"><a class="btn small" target="_blank" rel="noopener" href="' + h(E.mapsUrl(p)) + '">Route</a><button class="small" data-exam="' + h(x.id) + '">Edit</button></div></div>';
+      '<div class="row" style="margin-top:10px"><a class="btn small" target="_blank" rel="noopener" href="' + h(mapsLink(p)) + '">Route</a><button class="small" data-exam="' + h(x.id) + '">Edit</button></div></div>';
   }).join('') + '</div>';
   $('#v-exams').innerHTML = html;
   $('#addExam').onclick = () => editExam(null);
@@ -492,7 +499,7 @@ async function renderMensa() {
   const ds = E.ymd(d);
   let html = '<div class="weeknav"><button class="small" id="mPrev" aria-label="Previous day">←</button><div style="text-align:center"><strong>' + DAYS[d.getDay()] + ' ' + d.getDate() + '.' + (d.getMonth() + 1) + '.</strong><div class="mono muted">Mensa TU Hardenbergstraße</div></div><button class="small" id="mNext" aria-label="Next day">→</button></div>' +
     '<div id="mBody" style="margin-top:14px"><div class="empty">Loading the menu…</div></div>' +
-    '<div class="row" style="margin-top:14px"><a class="btn" target="_blank" rel="noopener" href="' + STW + '">Full menu on stw.berlin</a><a class="btn" target="_blank" rel="noopener" href="' + h(E.mapsUrl(E.BUILDINGS.MENSA)) + '">Route to Mensa</a></div>' +
+    '<div class="row" style="margin-top:14px"><a class="btn" target="_blank" rel="noopener" href="' + STW + '">Full menu on stw.berlin</a><a class="btn" target="_blank" rel="noopener" href="' + h(mapsLink(E.BUILDINGS.MENSA)) + '">Route to Mensa</a></div>' +
     '<p class="muted mono" style="margin-top:10px">Hardenbergstraße 34 · data via OpenMensa</p>';
   $('#v-mensa').innerHTML = html;
   $('#mPrev').onclick = () => { mensaDay--; renderMensa(); };
