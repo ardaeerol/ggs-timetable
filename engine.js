@@ -178,8 +178,41 @@
     throw lastErr || new Error('Transit API unreachable');
   }
 
+  // Transitous (api.transitous.org): open, community-run routing with VBB timetable and live data.
+  // Usage policy: non-commercial open source, light use, visible attribution (see Settings → About).
+  const TRANSITOUS = 'https://api.transitous.org';
+  async function transitousJourney(from, to, arriveBy) {
+    const q = new URLSearchParams({ fromPlace: from.lat + ',' + from.lng, toPlace: to.lat + ',' + to.lng, time: arriveBy.toISOString(), arriveBy: 'true' });
+    let lastErr = null;
+    for (const v of ['v5', 'v4', 'v1']) {
+      const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const t = ctrl ? setTimeout(() => ctrl.abort(), 9000) : null;
+      try {
+        const r = await fetch(TRANSITOUS + '/api/' + v + '/plan?' + q.toString(), ctrl ? { signal: ctrl.signal } : {});
+        if (r.status === 404) { lastErr = new Error('HTTP 404'); continue; }
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const j = await r.json();
+        const its = (j.itineraries || []).filter(it => it.startTime && it.endTime && it.legs && it.legs.length);
+        if (!its.length) throw new Error('No connection found');
+        const fits = its.filter(it => new Date(it.endTime) <= arriveBy);
+        const pick = (fits.length ? fits : its).reduce((b, it) => (new Date(it.startTime) > new Date(b.startTime) ? it : b));
+        const dep = new Date(pick.startTime), arr = new Date(pick.endTime);
+        const transit = pick.legs.filter(l => l.mode && l.mode !== 'WALK' && l.mode !== 'BIKE' && l.mode !== 'CAR');
+        const walk = Math.round(pick.legs.filter(l => l.mode === 'WALK').reduce((m, l) => m + (l.duration || (new Date(l.endTime) - new Date(l.startTime)) / 1000), 0) / 60);
+        return { leaveAt: dep.getTime(), arriveAt: arr.getTime(), minutes: Math.round((arr - dep) / 60000), walkMin: walk,
+          lines: transit.map(l => l.routeShortName || l.mode).filter(Boolean), source: 'bvg', via: 'Transitous' };
+      } catch (e) { lastErr = e; break; } finally { if (t) clearTimeout(t); }
+    }
+    throw lastErr || new Error('Transitous unreachable');
+  }
+
   // The connection you should take: the latest departure that still arrives by `arriveBy`.
+  // Transitous first; the transport.rest hosts (BVG, then VBB) if it does not answer.
   async function bvgJourney(from, to, arriveBy) {
+    try { return await transitousJourney(from, to, arriveBy); } catch (e) { /* fall through */ }
+    return await restJourney(from, to, arriveBy);
+  }
+  async function restJourney(from, to, arriveBy) {
     const p = new URLSearchParams({
       'from.latitude': from.lat, 'from.longitude': from.lng, 'from.address': from.label || 'Start',
       'to.latitude': to.lat, 'to.longitude': to.lng, 'to.address': to.address || to.name || 'Destination',
@@ -197,7 +230,7 @@
     const { dep, arr } = times(pick);
     const lines = pick.legs.filter(l => l.line).map(l => l.line.name);
     const walk = Math.round(pick.legs.filter(l => l.walking).reduce((m, l) => m + (new Date(l.arrival || l.plannedArrival) - new Date(l.departure || l.plannedDeparture)), 0) / 60000);
-    return { leaveAt: dep.getTime(), arriveAt: arr.getTime(), minutes: Math.round((arr - dep) / 60000), walkMin: walk, lines, source: 'bvg' };
+    return { leaveAt: dep.getTime(), arriveAt: arr.getTime(), minutes: Math.round((arr - dep) / 60000), walkMin: walk, lines, source: 'bvg', via: 'BVG' };
   }
 
   async function geocode(text) {
@@ -464,7 +497,7 @@
   root.Engine = {
     TERM, BUILDINGS, LIBRARIES, GROUP_SETS, SEED_COURSES, defaultState, migrate,
     ymd, parseYmd, at, addDays, mondayOf, inBreak, hm, pad,
-    occurrences, placeOf, upcomingTargets, travelFor, refreshTravel, currentOrigin, estimateMinutes, haversineKm, bvgJourney, geocode,
+    occurrences, placeOf, upcomingTargets, travelFor, refreshTravel, currentOrigin, estimateMinutes, haversineKm, bvgJourney, transitousJourney, restJourney, geocode,
     alertsDue, tick, kvGet, kvSet, loadAll, setAnswer, markFired, buildICS, mapsUrl, groupChoiceFor
   };
 })(typeof self !== 'undefined' ? self : globalThis);

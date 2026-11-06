@@ -214,8 +214,8 @@ nav.tabs a[aria-current="page"] .ic{background:var(--pri-c);color:var(--on-pri-c
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="engine.js?v=14"></script>
-<script src="native.js?v=14"></script>
+<script src="engine.js?v=15"></script>
+<script src="native.js?v=15"></script>
 <script>
 'use strict';
 const E = window.Engine;
@@ -431,8 +431,8 @@ function renderToday() {
         (tr ? '<div class="leave"><div><div class="lbl">' + (leaveIn > 0 ? 'Leave at' : 'Leave now') + '</div><div class="big" style="margin-top:6px">' + E.hm(new Date(tr.leaveAt)) + '<small>' + (leaveIn > 0 ? 'in ' + dur(leaveIn) : 'now') + '</small></div></div></div>' +
           '<div class="meter" aria-hidden="true"><span style="width:' + pct.toFixed(0) + '%"></span></div>' +
           '<p class="trav">' + (tr.source === 'bvg'
-            ? tr.minutes + ' min door to door · ' + h(tr.lines && tr.lines.length ? tr.lines.join(' → ') : 'walk') + ' · from ' + h(tr.origin) + '<br><span style="opacity:.75">BVG timetable, arriving ' + E.hm(new Date(tr.arriveAt)) + '</span>'
-            : '~' + tr.minutes + ' min from ' + h(tr.origin) + '<br><span style="opacity:.75">Rough estimate: the BVG timetable did not answer. Tap Refresh.</span>') + '</p>'
+            ? tr.minutes + ' min door to door · ' + h(tr.lines && tr.lines.length ? tr.lines.join(' → ') : 'walk') + ' · from ' + h(tr.origin) + '<br><span style="opacity:.75">Timetable via ' + h(tr.via || 'BVG') + ', arriving ' + E.hm(new Date(tr.arriveAt)) + '</span>'
+            : '~' + tr.minutes + ' min from ' + h(tr.origin) + '<br><span style="opacity:.75">Rough estimate: no timetable service answered. Tap Refresh.</span>') + '</p>'
           : '<p class="trav" style="margin-top:14px">Add your home address in Settings to get leave times.</p>') +
         '<div class="acts"><a class="btn primary" href="' + h(mapsLink(nx.place)) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Directions</a>' +
         '<button class="tonal" id="refreshTravel">Refresh</button>' + (nx.occ ? '<button class="tonal" data-occ="' + h(nx.occ.id) + '">Details</button>' : '') + '</div></div>';
@@ -834,7 +834,7 @@ function renderSettings() {
     '<div class="row"><button class="danger small" id="sReset">Reset timetable to the PDF</button></div><div id="resetConfirm" class="notice row" hidden style="justify-content:space-between">Replace all courses and one-week changes with the original timetable? Exams and addresses stay.<button class="danger small" id="sResetYes">Reset</button></div></div>' +
 
     '<h2>About</h2><div class="card"><p class="mono muted">' + h(E.TERM.name) + ' · lectures ' + h(E.TERM.lectureStart) + ' – ' + h(E.TERM.lectureEnd) + ' · break 21.12.–02.01.</p>' +
-    '<p class="muted" style="margin-top:6px">Transit: BVG via transport.rest · Menu: OpenMensa · Building coordinates are approximate; Maps routes to the address.</p>' + (idbOK ? '' : '<p class="notice" style="margin-top:8px">Storage is blocked in this browser, so changes will not be kept.</p>') + '</div>';
+    '<p class="muted" style="margin-top:6px">Journeys: <a href="https://transitous.org/" target="_blank" rel="noopener">Transitous</a> (<a href="https://transitous.org/sources/" target="_blank" rel="noopener">data sources</a>, map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors), with BVG/VBB via transport.rest as backup · Menu: OpenMensa · Contact: <a href="https://github.com/ardaeerol/ggs-timetable" target="_blank" rel="noopener">github.com/ardaeerol/ggs-timetable</a></p>' + (idbOK ? '' : '<p class="notice" style="margin-top:8px">Storage is blocked in this browser, so changes will not be kept.</p>') + '</div>';
   $('#v-settings').innerHTML = html;
 
   S.addresses.forEach((a, i) => {
