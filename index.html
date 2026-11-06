@@ -90,6 +90,7 @@ button:disabled{opacity:.6}
 /* next up */
 .next{background:var(--pri-c);color:var(--on-pri-c);border-radius:28px;padding:18px;box-shadow:none}
 .next.urgent{background:var(--accent);color:var(--on-accent)}
+.next[data-card-occ]{cursor:pointer}
 .next .lbl{font:700 12.5px/1 var(--f-body);letter-spacing:.02em;opacity:.8}
 .next h3{margin-top:8px;font-size:22px}
 .next .sub{margin-top:4px;opacity:.85;font-weight:500}
@@ -213,8 +214,8 @@ nav.tabs a[aria-current="page"] .ic{background:var(--pri-c);color:var(--on-pri-c
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="engine.js?v=13"></script>
-<script src="native.js?v=13"></script>
+<script src="engine.js?v=14"></script>
+<script src="native.js?v=14"></script>
 <script>
 'use strict';
 const E = window.Engine;
@@ -422,7 +423,7 @@ function renderToday() {
       const sameDay = E.ymd(nx.start) === todayStr;
       const title = nx.occ ? shortTitle(nx.occ.course) : nx.title;
       const pct = leaveIn == null ? 0 : Math.max(0, Math.min(100, 100 - leaveIn / (60 * 60000) * 100));
-      html += '<h2>Next up</h2><div class="card next' + (urgent ? ' urgent' : '') + '">' +
+      html += '<h2>Next up</h2><div class="card next' + (urgent ? ' urgent' : '') + '"' + (nx.occ ? ' data-card-occ="' + h(nx.occ.id) + '" role="button" tabindex="0" aria-label="' + h(title) + ' details"' : '') + '>' +
         '<div class="lbl">' + (sameDay ? 'Starts in ' + dur(nx.start - now) : h(fmtDate(nx.start)) + ' · in ' + dur(nx.start - now)) + (nx.occ ? ' · ' + h(nx.occ.course.type) : ' · Exam') + '</div>' +
         '<h3>' + h(title) + '</h3><p class="sub">' + E.hm(nx.start) + (nx.occ ? '–' + E.hm(nx.occ.end) : '') + ' · ' + h(nx.room) + ' · ' + h(nx.place.name) + '</p>' +
         (nx.pending ? '<p class="notice" style="margin-top:10px">Group not chosen yet. Timed for the earlier group.</p>' : '') +
@@ -997,6 +998,23 @@ async function checkUpdate() {
   } catch (e) {}
 }
 
+// ---------- keep the open app on the newest version ----------
+// Android keeps the app alive in the background, so it may never reload by itself.
+const WEB_V = Number(((document.querySelector('script[src^="engine.js"]') || {}).getAttribute && document.querySelector('script[src^="engine.js"]').getAttribute('src').match(/v=(\d+)/) || [])[1] || 0);
+let lastWebCheck = 0;
+async function checkWebUpdate() {
+  if (Date.now() - lastWebCheck < 60000) return;
+  lastWebCheck = Date.now();
+  try {
+    const r = await fetch('index.html?check=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return;
+    const m = (await r.text()).match(/engine\.js\?v=(\d+)/);
+    if (m && Number(m[1]) > WEB_V && !$('#sheetHost').querySelector('.sheet')) {
+      location.replace(location.pathname.replace(/index\.html$/, '') + '?v=' + m[1] + location.hash);
+    }
+  } catch (e) {}
+}
+
 // ---------- notifications & location ----------
 async function showNote(a) {
   if (('Notification' in window) && Notification.permission === 'granted' && swReg) {
@@ -1072,12 +1090,14 @@ document.addEventListener('click', e => {
   }
   const dy = e.target.closest('[data-day]'); if (dy) { selDay = dy.dataset.day; renderHeader(); renderToday(); return; }
   const dish = e.target.closest('[data-dish]'); if (dish) { if (!pressFired && e.detail === 0) showDish(dish); pressFired = false; return; }
+  const cardOcc = e.target.closest('[data-card-occ]');
+  if (cardOcc && !e.target.closest('a,button')) { occSheet(cardOcc.dataset.cardOcc); return; }
   const oc = e.target.closest('[data-occ]'); if (oc) { occSheet(oc.dataset.occ); return; }
   const ed = e.target.closest('[data-edit]'); if (ed) { editCourse(ed.dataset.edit); return; }
   const ex = e.target.closest('[data-exam]'); if (ex) { editExam(ex.dataset.exam); return; }
 });
 window.addEventListener('hashchange', route);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { reloadShared().then(() => { render(); runTick(); }); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkWebUpdate(); reloadShared().then(() => { render(); runTick(); }); } });
 
 (async function boot() {
   try { const all = await E.loadAll(); S = all.state; A = all.answers; T = all.travel; LOC = all.loc; await save(); } catch (e) { idbOK = false; }
@@ -1085,7 +1105,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) { re
     Native.init({
       onGroup: (setId, date, opt) => answer(setId, date, opt),
       onOpen: hash => { if (location.hash !== '#' + hash) location.hash = hash; },
-      onResume: () => { reloadShared().then(() => { render(); runTick(); }); checkUpdate(); }
+      onResume: () => { checkWebUpdate(); reloadShared().then(() => { render(); runTick(); }); checkUpdate(); }
     });
     // Outside links (Maps, stw.berlin) open in their Android apps.
     document.addEventListener('click', e => {
@@ -1110,6 +1130,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) { re
   }
   route(); startLocation(); runTick();
   setInterval(() => { if (!document.hidden) runTick(); }, 30000);
+  setInterval(() => { if (!document.hidden) checkWebUpdate(); }, 15 * 60000);
 })();
 </script>
 </body>

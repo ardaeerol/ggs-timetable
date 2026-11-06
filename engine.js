@@ -223,7 +223,9 @@
   async function refreshTravel(state, answers, travel, loc, now, horizonH) {
     const origin = currentOrigin(state, loc, now);
     if (!origin) return travel;
-    const items = upcomingTargets(state, answers, now, horizonH || 18);
+    // The coming hours, and always the next class even when it is days away (it is on the Next-up card).
+    let items = upcomingTargets(state, answers, now, horizonH || 18);
+    if (!items.length) items = upcomingTargets(state, answers, now, 24 * 7).slice(0, 1);
     for (const it of items) {
       const k = it.id + '@' + origin.key;
       const cached = travel[k];
