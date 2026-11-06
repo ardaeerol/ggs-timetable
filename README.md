@@ -16,6 +16,12 @@ Timetable app for TU Berlin MSc Geodesy & Geoinformation Science, Winter Term 20
 Chrome → ⋮ → "Add to Home screen" → Install. Then in the app: Settings → Allow notifications, set your two addresses, pick the default.
 Android: Settings → Apps → GGS → Battery → "Unrestricted" so background checks are not stopped.
 
+## Android app (recommended)
+The APK in Releases is a thin shell around this site that adds real Android alarms, so reminders ring with the app closed.
+Built by `.github/workflows/android.yml` from `android-shell/` whenever that folder changes (or run it by hand under Actions).
+Signing: the keystore is stored encrypted in `android-shell/signing/`; its password must be saved as the repository secret `ANDROID_KEYSTORE_PASS`.
+Web changes reach the Android app automatically; only changes in `android-shell/` need a new APK, and the app shows an update notice.
+
 ## Updating
 - Day-to-day changes (room, time, cancelled class, new course, exams): do them in the app.
 - Code changes: replace the files in the repository; the app picks up the new version on its next start.

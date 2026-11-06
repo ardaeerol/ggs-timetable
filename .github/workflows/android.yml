@@ -1,0 +1,92 @@
+name: Android APK
+
+# Builds the Android shell (android-shell/) into a signed APK and publishes it as a GitHub Release.
+# Web changes (index.html, engine.js, native.js) do not need a new APK: the app loads them from GitHub Pages.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'android-shell/**'
+      - '.github/workflows/android.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      BUILD: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Capacitor
+        working-directory: android-shell
+        run: npm install --no-audit --no-fund
+
+      - name: Create Android project
+        working-directory: android-shell
+        run: |
+          npx cap add android
+          npx cap sync android
+          node scripts/patch-android.js "$BUILD"
+
+      - name: Build release APK
+        working-directory: android-shell/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Sign APK
+        id: sign
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+        run: |
+          if [ -z "$KS_PASS" ]; then
+            echo "::warning::ANDROID_KEYSTORE_PASS secret is not set yet. The build works, but no APK is published."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in android-shell/signing/ggs.jks.enc -out ks.jks -pass env:KS_PASS
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          "$BT/zipalign" -p -f 4 android-shell/android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          "$BT/apksigner" sign --ks ks.jks --ks-pass env:KS_PASS --key-pass env:KS_PASS --ks-key-alias ggs --out GGS-Timetable.apk aligned.apk
+          "$BT/apksigner" verify --print-certs GGS-Timetable.apk | head -3
+          rm -f ks.jks
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Publish release
+        if: steps.sign.outputs.signed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "app-v1.0.$BUILD" GGS-Timetable.apk \
+            --title "GGS Timetable 1.0.$BUILD" --latest \
+            --notes "Android app. Install it over the previous version; your data stays. Download GGS-Timetable.apk below."
+
+      - name: Announce version to the app
+        if: steps.sign.outputs.signed == 'true'
+        run: |
+          printf '{"build": %s, "version": "1.0.%s", "url": "https://github.com/%s/releases/latest/download/GGS-Timetable.apk"}\n' "$BUILD" "$BUILD" "$GITHUB_REPOSITORY" > app-version.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app-version.json
+          git commit -m "Announce Android app 1.0.$BUILD"
+          git pull --rebase origin main
+          git push origin HEAD:main

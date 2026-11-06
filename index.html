@@ -9,134 +9,186 @@
 <link rel="icon" href="app-192.png">
 <link rel="apple-touch-icon" href="app-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap">
 <style>
-/* Layout: one-column phone app, survey-sheet feel: thin rules, mono coordinates, a levelling-staff time ruler on the next class. */
+/* Layout: one-column planner. App bar with date title, week strip, tonal "next up" card, colour-coded agenda; Material 3 style pill navigation. */
 :root{
-  --bg:#F2F4F1; --surface:#FFFFFF; --sunk:#E8ECE8; --ink:#15201C; --muted:#5C6964; --line:#D5DCD7;
-  --accent:#C2372A; --accent-ink:#FFFFFF; --teal:#12676A; --teal-soft:#DCEDEB;
-  --ok:#2E7D4F; --warn:#A86A00; --warn-soft:#FBEFD6; --bad:#B3261E; --bad-soft:#F8E0DD;
-  --f-display:"Barlow Condensed","Roboto Condensed","Arial Narrow",sans-serif;
-  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --f-mono:"IBM Plex Mono",ui-monospace,"Roboto Mono",monospace;
-  --r:10px;
-  color-scheme:light;
+  --bg:#F5F6F8; --surface:#FFFFFF; --surface-2:#ECEEF2; --ink:#15171C; --muted:#5F6573; --line:#E2E5EA;
+  --pri:#0E7C7B; --on-pri:#FFFFFF; --pri-c:#D2EEEB; --on-pri-c:#063B3A;
+  --accent:#E35A45; --on-accent:#FFFFFF; --warn:#8F5A00; --warn-c:#FCEBCB; --bad:#B3261E; --bad-c:#FFDAD6;
+  --ev-s:72%; --ev-l:94%; --dot-s:58%; --dot-l:46%; --ev-ink-l:24%;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 14px rgba(16,24,40,.06);
+  --f-display:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:20px; color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0E1412; --surface:#17201D; --sunk:#111917; --ink:#E6ECE9; --muted:#93A19B; --line:#2A3531;
-  --accent:#EE6450; --accent-ink:#1A0A07; --teal:#5BBDB6; --teal-soft:#16302E;
-  --ok:#6CC28F; --warn:#E3A93D; --warn-soft:#2F2614; --bad:#F2827A; --bad-soft:#341B19; color-scheme:dark}}
+  --bg:#0F1114; --surface:#181B20; --surface-2:#23272E; --ink:#E7E9EE; --muted:#9AA1AD; --line:#2B3038;
+  --pri:#5ED3CC; --on-pri:#00302E; --pri-c:#133F3D; --on-pri-c:#C2F1EC;
+  --accent:#FF8A73; --on-accent:#3A0A03; --warn:#F2C16B; --warn-c:#3A2D10; --bad:#FFB4AB; --bad-c:#4A1612;
+  --ev-s:28%; --ev-l:19%; --dot-s:70%; --dot-l:68%; --ev-ink-l:90%; --shadow:none; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0E1412; --surface:#17201D; --sunk:#111917; --ink:#E6ECE9; --muted:#93A19B; --line:#2A3531;
-  --accent:#EE6450; --accent-ink:#1A0A07; --teal:#5BBDB6; --teal-soft:#16302E;
-  --ok:#6CC28F; --warn:#E3A93D; --warn-soft:#2F2614; --bad:#F2827A; --bad-soft:#341B19; color-scheme:dark}
+  --bg:#0F1114; --surface:#181B20; --surface-2:#23272E; --ink:#E7E9EE; --muted:#9AA1AD; --line:#2B3038;
+  --pri:#5ED3CC; --on-pri:#00302E; --pri-c:#133F3D; --on-pri-c:#C2F1EC;
+  --accent:#FF8A73; --on-accent:#3A0A03; --warn:#F2C16B; --warn-c:#3A2D10; --bad:#FFB4AB; --bad-c:#4A1612;
+  --ev-s:28%; --ev-l:19%; --dot-s:70%; --dot-l:68%; --ev-ink-l:90%; --shadow:none; color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--f-body);padding-top:env(safe-area-inset-top,0px);
-  padding-bottom:calc(72px + env(safe-area-inset-bottom,0px));-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--f-body);font-variant-numeric:tabular-nums;padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:calc(84px + env(safe-area-inset-bottom,0px));-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
-.wrap{max-width:640px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 24px}
-header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-block:6px 14px;border-bottom:1px solid var(--line);margin-bottom:16px}
-.brand{font:700 26px/1 var(--f-display);letter-spacing:.01em;text-transform:uppercase}
-.brand small{display:block;font:500 12px/1.3 var(--f-mono);letter-spacing:.02em;text-transform:none;color:var(--muted);margin-top:4px}
-.chip{display:inline-flex;align-items:center;gap:6px;font:500 12px/1 var(--f-mono);padding:6px 9px;border-radius:999px;background:var(--sunk);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
-.chip.live{color:var(--teal);border-color:var(--teal);background:var(--teal-soft)}
+.wrap{max-width:640px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:8px 24px}
+/* app bar */
+.appbar{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-block:14px 12px}
+.appbar .eyebrow{margin:0;font:600 13px/1.2 var(--f-body);color:var(--muted)}
+.appbar h1{margin:2px 0 0;font:800 30px/1.05 var(--f-display);letter-spacing:-.02em;text-wrap:balance}
+.chip{display:inline-flex;align-items:center;gap:6px;font:600 12.5px/1 var(--f-body);padding:8px 11px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap;border:0}
+.chip svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2}
+.chip.live{background:var(--pri-c);color:var(--on-pri-c)}
 .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
-h2{font:600 13px/1 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:22px 0 10px}
-h3{font:600 20px/1.15 var(--f-display);margin:0;text-wrap:balance}
+h2{font:700 13px/1.2 var(--f-body);letter-spacing:.02em;color:var(--muted);margin:24px 0 10px}
+h3{font:700 19px/1.2 var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
 p{margin:0}
 .muted{color:var(--muted)}
-.mono{font-family:var(--f-mono);font-size:12.5px}
+.mono{font:500 13px/1.35 var(--f-body);font-variant-numeric:tabular-nums}
 .stack{display:flex;flex-direction:column;gap:10px}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
-button,.btn{font:600 14px/1 var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:10px 13px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;min-height:40px}
-button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
-.btn.primary,button.primary{background:var(--teal);border-color:var(--teal);color:var(--bg)}
-.btn.hot,button.hot{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-button.ghost{background:transparent}
-button.small{min-height:32px;padding:7px 10px;font-size:13px}
-button.danger{color:var(--bad);border-color:var(--bad)}
-.pill{font:600 11px/1 var(--f-mono);padding:4px 7px;border-radius:5px;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap}
-.pill.ex{background:var(--sunk);color:var(--muted)}
-.pill.lec{background:var(--teal-soft);color:var(--teal)}
-.pill.chg{background:var(--warn-soft);color:var(--warn)}
-.pill.cx{background:var(--bad-soft);color:var(--bad)}
-.pill.q{background:var(--warn-soft);color:var(--warn)}
-/* Next class */
-.next{position:relative;overflow:hidden;padding:16px 16px 16px 26px}
-.next::before{content:"";position:absolute;left:0;top:0;bottom:0;width:10px;
-  background:repeating-linear-gradient(180deg,var(--accent) 0 12px,var(--surface) 12px 24px);border-right:1px solid var(--line)}
-.next .when{font:700 44px/1 var(--f-display);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
-.next .when span{font-size:22px;color:var(--muted);font-weight:500}
-.leave{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
-.leave dt{font:600 11px/1.6 var(--f-mono);text-transform:uppercase;color:var(--muted);letter-spacing:.04em}
-.leave dd{margin:0;font-variant-numeric:tabular-nums;min-width:0}
-.leave .big{font:700 22px/1 var(--f-display)}
-.urgent .big{color:var(--accent)}
-/* Timeline */
-.tl{list-style:none;margin:0;padding:0;border-left:2px solid var(--line);margin-left:6px}
-.tl li{position:relative;padding:0 0 14px 16px}
-.tl li::before{content:"";position:absolute;left:-6px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--muted)}
-.tl li.now::before{background:var(--accent);border-color:var(--accent)}
-.tl li.past{opacity:.55}
-.tl li.cancel .t{text-decoration:line-through}
-.tl .time{font:600 15px/1.2 var(--f-display);font-variant-numeric:tabular-nums;letter-spacing:.02em}
-.tl .t{font-weight:600}
-.occ{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;background:none;padding:0;min-height:0;font:inherit;color:inherit;cursor:pointer}
-.occ>div{min-width:0}
-/* Week */
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:24px 0 10px}
+.sec-head h2{margin:0}
+.card{background:var(--surface);border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
+/* buttons */
+button,.btn{font:600 14px/1 var(--f-body);border:0;background:var(--surface-2);color:var(--ink);border-radius:999px;padding:11px 16px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px}
+button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--pri);outline-offset:2px}
+.btn.primary,button.primary{background:var(--pri);color:var(--on-pri)}
+.btn.hot,button.hot{background:var(--accent);color:var(--on-accent)}
+.btn.tonal,button.tonal{background:var(--pri-c);color:var(--on-pri-c)}
+button.ghost{background:transparent;color:var(--pri)}
+button.small,.btn.small{min-height:34px;padding:8px 13px;font-size:13px}
+button.danger{background:var(--bad-c);color:var(--bad)}
+button:disabled{opacity:.6}
+.icon-btn{width:42px;height:42px;padding:0;border-radius:50%}
+.icon-btn svg,.btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* chips */
+.pill{font:600 11.5px/1 var(--f-body);padding:5px 9px;border-radius:999px;white-space:nowrap;display:inline-block}
+.pill.ex{background:var(--surface-2);color:var(--muted)}
+.pill.lec{background:var(--pri-c);color:var(--on-pri-c)}
+.pill.chg,.pill.q{background:var(--warn-c);color:var(--warn)}
+.pill.cx{background:var(--bad-c);color:var(--bad)}
+/* week strip */
+.strip{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:4px 0 6px}
+.sd{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 8px;border-radius:16px;background:transparent;min-height:0;color:var(--ink)}
+.sd .wd{font:600 11.5px/1 var(--f-body);color:var(--muted)}
+.sd .dn{font:700 18px/1.1 var(--f-display)}
+.sd .dots{display:flex;gap:3px;height:5px}
+.sd .dots i{width:5px;height:5px;border-radius:50%;background:var(--muted);opacity:.55}
+.sd.today .dn{color:var(--pri)}
+.sd[aria-pressed="true"]{background:var(--pri);color:var(--on-pri)}
+.sd[aria-pressed="true"] .wd,.sd[aria-pressed="true"] .dn{color:var(--on-pri)}
+.sd[aria-pressed="true"] .dots i{background:var(--on-pri);opacity:.8}
+.sd.off{opacity:.45}
+/* next up */
+.next{background:var(--pri-c);color:var(--on-pri-c);border-radius:28px;padding:18px;box-shadow:none}
+.next.urgent{background:var(--accent);color:var(--on-accent)}
+.next .lbl{font:700 12.5px/1 var(--f-body);letter-spacing:.02em;opacity:.8}
+.next h3{margin-top:8px;font-size:22px}
+.next .sub{margin-top:4px;opacity:.85;font-weight:500}
+.next .leave{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:16px;flex-wrap:wrap}
+.next .big{font:800 40px/1 var(--f-display);letter-spacing:-.03em}
+.next .big small{font:600 15px/1 var(--f-body);letter-spacing:0;opacity:.8;margin-left:6px}
+.meter{height:6px;border-radius:999px;background:color-mix(in srgb,currentColor 18%,transparent);margin-top:14px;overflow:hidden}
+.meter span{display:block;height:100%;border-radius:inherit;background:currentColor}
+.next .trav{margin-top:10px;font-weight:500;opacity:.9}
+.next .acts{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.next .btn.primary{background:var(--on-pri-c);color:var(--pri-c)}
+.next.urgent .btn.primary{background:var(--on-accent);color:var(--accent)}
+.next button.tonal{background:color-mix(in srgb,currentColor 14%,transparent);color:inherit}
+.next .notice{background:color-mix(in srgb,currentColor 12%,transparent);color:inherit;border:0}
+/* agenda */
+.agenda{display:flex;flex-direction:column;gap:8px}
+.ev{display:grid;grid-template-columns:52px 1fr;gap:10px;width:100%;text-align:left;background:none;padding:0;border-radius:0;min-height:0;color:inherit;font:inherit;align-items:stretch}
+.ev-time{display:flex;flex-direction:column;padding-top:12px;font:700 14px/1.2 var(--f-body)}
+.ev-time span{font-weight:500;color:var(--muted);font-size:12.5px;margin-top:2px}
+.ev-card{background:hsl(var(--c) var(--ev-s) var(--ev-l));border-radius:18px;padding:12px 14px;min-width:0;color:hsl(var(--c) 40% var(--ev-ink-l))}
+.ev-title{font:700 15.5px/1.25 var(--f-body);display:flex;gap:8px;align-items:baseline}
+.ev-title::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:hsl(var(--c) var(--dot-s) var(--dot-l));transform:translateY(-1px)}
+.ev-meta{font:500 13px/1.35 var(--f-body);opacity:.8;margin-top:3px;padding-left:16px}
+.ev-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-left:16px}
+.ev-tags .pill{background:color-mix(in srgb,currentColor 12%,transparent);color:inherit}
+.ev-tags .pill.cx{background:var(--bad-c);color:var(--bad)}
+.ev-tags .pill.chg,.ev-tags .pill.q{background:var(--warn-c);color:var(--warn)}
+.ev.past{opacity:.5}
+.ev.cancel .ev-title{text-decoration:line-through}
+.ev.live .ev-card{outline:2px solid hsl(var(--c) var(--dot-s) var(--dot-l));outline-offset:-2px}
+.nowline{display:grid;grid-template-columns:52px 1fr;gap:10px;align-items:center;color:var(--accent);font:700 12px/1 var(--f-body)}
+.nowline i{height:2px;background:var(--accent);border-radius:2px;position:relative}
+.nowline i::before{content:"";position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.gap{display:grid;grid-template-columns:52px 1fr;gap:10px;text-decoration:none;color:var(--muted);font:500 13px/1.3 var(--f-body)}
+.gap div{border:1.5px dashed var(--line);border-radius:14px;padding:9px 12px;display:flex;justify-content:space-between;gap:8px}
+.gap b{color:var(--pri);font-weight:600}
+/* week */
 .weeknav{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.weeknav strong{font:600 18px/1 var(--f-display);letter-spacing:.02em}
-.day{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.day header{display:flex;justify-content:space-between;padding:9px 12px;background:var(--sunk);font:600 14px/1 var(--f-display);letter-spacing:.06em;text-transform:uppercase}
-.day.today header{background:var(--teal-soft);color:var(--teal)}
-.slot{display:grid;grid-template-columns:62px 1fr;gap:10px;padding:10px 12px;border-top:1px solid var(--line);width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;border-radius:0;font:inherit;color:inherit;min-height:0;cursor:pointer}
-.slot:first-of-type{border-top:0}
-.slot .time{font:600 14px/1.25 var(--f-display);font-variant-numeric:tabular-nums}
-.slot.dim{opacity:.5}
-.slot>div{min-width:0}
-/* Forms */
-label{display:flex;flex-direction:column;gap:5px;font:600 12px/1.2 var(--f-mono);text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
-input,select,textarea{font:15px/1.3 var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;width:100%;min-width:0;text-transform:none;letter-spacing:0}
+.weeknav strong{font:700 18px/1.2 var(--f-display)}
+.wday{display:flex;flex-direction:column;gap:6px}
+.wday-h{display:flex;align-items:baseline;gap:8px;margin:18px 0 2px;font:700 15px/1 var(--f-body)}
+.wday-h span{color:var(--muted);font-weight:500}
+.wday-h.today{color:var(--pri)}
+.wrow{display:flex;gap:10px;align-items:center;width:100%;text-align:left;border-radius:16px;padding:10px 12px;min-height:0;font:inherit;color:hsl(var(--c) 40% var(--ev-ink-l));background:hsl(var(--c) var(--ev-s) var(--ev-l))}
+.wrow .t{font:700 13.5px/1.2 var(--f-body);width:44px;flex:none}
+.wrow .n{min-width:0;flex:1}
+.wrow .n b{display:block;font:600 14px/1.25 var(--f-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wrow .n span{font:500 12.5px/1.3 var(--f-body);opacity:.8}
+.wrow.dim{opacity:.45}
+.wrow.cancel b{text-decoration:line-through}
+.wempty{color:var(--muted);font-size:13.5px;padding:4px 2px}
+.course{display:flex;gap:12px;align-items:center;flex-wrap:nowrap}
+.course .sw{width:12px;height:12px;border-radius:50%;flex:none;background:hsl(var(--c) var(--dot-s) var(--dot-l))}
+.course>div{min-width:0;flex:1}
+/* forms */
+label{display:flex;flex-direction:column;gap:6px;font:600 12.5px/1.2 var(--f-body);color:var(--muted)}
+input,select,textarea{font:500 15px/1.3 var(--f-body);color:var(--ink);background:var(--surface-2);border:1.5px solid transparent;border-radius:14px;padding:12px;width:100%;min-width:0}
+input:focus,select:focus,textarea:focus{border-color:var(--pri);outline:none}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.toggle{flex-direction:row;align-items:center;justify-content:space-between;text-transform:none;font:500 15px/1.3 var(--f-body);color:var(--ink);letter-spacing:0}
-.toggle input{width:22px;height:22px;flex:none}
-.set{display:flex;flex-direction:column;gap:12px}
-.result{display:block;width:100%;text-align:left;font-weight:500}
-/* Mensa */
-.meal{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
-.meal:first-child{border-top:0}
-.bgstat{border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--bg)}
-.dist{font:700 20px/1 var(--f-display);font-variant-numeric:tabular-nums;color:var(--teal)}
-.seg{display:flex;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
-.seg a{flex:1;text-align:center;padding:9px 0;border-radius:7px;text-decoration:none;color:var(--muted);font:600 14px/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase}
-.seg a[aria-selected="true"]{background:var(--surface);color:var(--teal);box-shadow:0 1px 2px rgba(0,0,0,.12)}
-.dish{width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);border-radius:0;min-height:0;font:inherit;color:inherit;cursor:pointer;padding:9px 0}
+.toggle{flex-direction:row;align-items:center;justify-content:space-between;font:500 15px/1.3 var(--f-body);color:var(--ink)}
+.toggle input{width:22px;height:22px;flex:none;accent-color:var(--pri)}
+.set{display:flex;flex-direction:column;gap:14px}
+.result{display:block;width:100%;text-align:left;font-weight:500;border-radius:14px}
+/* campus */
+.meal{display:flex;justify-content:space-between;gap:12px;padding:10px 0}
+.dish{width:100%;text-align:left;background:none;border-top:1px solid var(--line);border-radius:0;min-height:0;font:inherit;color:inherit;cursor:pointer;padding:11px 0}
 .card h2+.dish{border-top:0}
-.meal .price{font:500 13px/1.3 var(--f-mono);white-space:nowrap;font-variant-numeric:tabular-nums}
-/* Nav */
-nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);
-  padding:0 max(8px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(8px,env(safe-area-inset-left,0px));display:flex;justify-content:space-around}
-nav.tabs a{flex:1;max-width:120px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 10px;color:var(--muted);text-decoration:none;font:600 12px/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase}
-nav.tabs a svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
-nav.tabs a[aria-current="page"]{color:var(--teal)}
-/* Sheet */
-.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30;display:flex;align-items:flex-end;justify-content:center}
-.sheet{background:var(--surface);width:100%;max-width:640px;max-height:88vh;overflow:auto;border-radius:16px 16px 0 0;
-  padding:18px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
-.sheet .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:-6px auto 12px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--ink);color:var(--bg);padding:11px 15px;border-radius:10px;max-width:calc(100% - 32px);font-weight:500;box-shadow:0 6px 24px rgba(0,0,0,.25)}
-.notice{border-left:3px solid var(--warn);background:var(--warn-soft);padding:10px 12px;border-radius:6px}
-.empty{padding:22px 14px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r)}
-@media (prefers-reduced-motion: no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
+.meal .price{font:600 13.5px/1.3 var(--f-body);white-space:nowrap}
+.seg{display:flex;background:var(--surface-2);border-radius:999px;padding:4px;gap:4px}
+.seg a{flex:1;text-align:center;padding:10px 0;border-radius:999px;text-decoration:none;color:var(--muted);font:700 14px/1 var(--f-body)}
+.seg a[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.dist{font:800 20px/1 var(--f-display);color:var(--pri)}
+.bgstat{border-radius:14px;padding:12px;background:var(--surface-2)}
+/* nav */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);box-shadow:0 -1px 0 var(--line);
+  padding:8px max(6px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px));display:flex;justify-content:space-around}
+nav.tabs a{flex:1;max-width:110px;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--muted);text-decoration:none;font:600 12px/1 var(--f-body)}
+nav.tabs .ic{display:flex;align-items:center;justify-content:center;width:56px;height:30px;border-radius:999px;transition:background .15s}
+nav.tabs svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+nav.tabs a[aria-current="page"]{color:var(--ink)}
+nav.tabs a[aria-current="page"] .ic{background:var(--pri-c);color:var(--on-pri-c)}
+/* sheet, toast, misc */
+.scrim{position:fixed;inset:0;background:rgba(10,12,16,.45);z-index:30;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:640px;max-height:90vh;overflow:auto;border-radius:28px 28px 0 0;
+  padding:14px max(18px,env(safe-area-inset-right,0px)) calc(22px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px))}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:14px;max-width:calc(100% - 32px);font-weight:500;box-shadow:0 8px 28px rgba(0,0,0,.25)}
+.notice{background:var(--warn-c);color:var(--warn);padding:11px 13px;border-radius:14px;font-weight:500}
+.empty{padding:22px 16px;text-align:center;color:var(--muted);background:var(--surface);border-radius:var(--r)}
+.fab{position:fixed;right:max(18px,env(safe-area-inset-right,0px));bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:15;width:56px;height:56px;border-radius:18px;background:var(--pri-c);color:var(--on-pri-c);box-shadow:0 6px 18px rgba(0,0,0,.18);padding:0}
+.fab svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+@media (prefers-reduced-motion: no-preference){.sheet{animation:up .2s cubic-bezier(.2,.8,.2,1)}@keyframes up{from{transform:translateY(30px);opacity:.5}}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header class="top">
-    <div class="brand">GGS Timetable<small id="hdrDate">TU Berlin · Geodesy &amp; Geoinformation</small></div>
-    <span class="chip" id="originChip"><span class="dot"></span><span id="originText">No address</span></span>
+  <header class="appbar">
+    <div style="min-width:0"><p class="eyebrow" id="hdrEyebrow"></p><h1 id="hdrTitle">Today</h1></div>
+    <span class="chip" id="originChip"><svg viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg><span id="originText">No address</span></span>
   </header>
 
   <section id="v-today"></section>
@@ -147,30 +199,33 @@ nav.tabs a[aria-current="page"]{color:var(--teal)}
 </div>
 
 <nav class="tabs" aria-label="Sections">
-  <a href="#today" data-v="today"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>Today</a>
-  <a href="#week" data-v="week"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Week</a>
-  <a href="#exams" data-v="exams"><svg viewBox="0 0 24 24"><path d="M6 3.5h9l3 3V20.5H6z"/><path d="M9 11h6M9 15h6"/></svg>Exams</a>
-  <a href="#mensa" data-v="mensa"><svg viewBox="0 0 24 24"><path d="M7 3v8a2 2 0 0 0 2 2v8M5 3v5M9 3v5M17 3c-2 2-2 7 0 9v9"/></svg>Campus</a>
-  <a href="#prefs" data-v="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>Settings</a>
+  <a href="#today" data-v="today"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v10a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5z"/><path d="M4 10h16M8.5 3v4M15.5 3v4M9 14.5l2 2 4-4"/></svg></span>Today</a>
+  <a href="#week" data-v="week"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>Week</a>
+  <a href="#exams" data-v="exams"><span class="ic"><svg viewBox="0 0 24 24"><path d="M7 3.5h7.5L19 8v12.5H7z"/><path d="M14 3.5V8h5M10 13h6M10 16.5h4"/></svg></span>Exams</a>
+  <a href="#mensa" data-v="mensa"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg></span>Campus</a>
+  <a href="#prefs" data-v="settings"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></span>Settings</a>
 </nav>
 
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="engine.js?v=10"></script>
+<script src="engine.js?v=11"></script>
+<script src="native.js?v=11"></script>
 <script>
 'use strict';
 const E = window.Engine;
+const NATIVE = !!(window.Native && window.Native.isNative);
+let UPDATE = null;
 const $ = s => document.querySelector(s);
 const h = s => String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 let S = E.defaultState(), A = {}, T = {}, LOC = null;
-let view = 'today', campusTab = 'mensa', weekOffset = 0, mensaDay = 0, swReg = null, idbOK = true;
+let view = 'today', selDay = null, campusTab = 'mensa', weekOffset = 0, mensaDay = 0, swReg = null, idbOK = true;
 
 // ---------- persistence ----------
-async function save() { try { await E.kvSet('state', S); } catch (e) { idbOK = false; } }
+async function save() { try { await E.kvSet('state', S); } catch (e) { idbOK = false; } scheduleSoon(); }
 async function reloadShared() {
   try { A = (await E.kvGet('answers')) || {}; T = (await E.kvGet('travel')) || {}; } catch (e) {}
 }
@@ -208,6 +263,7 @@ function openSheet(html, onMount) {
 }
 function closeSheet() { $('#sheetHost').innerHTML = ''; }
 async function shareOrDownload(name, text, mime) {
+  if (NATIVE) { try { await Native.shareFile(name, text, mime); } catch (e) { toast('Could not share the file: ' + e.message, 5000); } return; }
   const file = new File([text], name, { type: mime });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try { await navigator.share({ files: [file], title: name }); return; } catch (e) { if (e.name === 'AbortError') return; }
@@ -217,13 +273,32 @@ async function shareOrDownload(name, text, mime) {
 }
 
 // ---------- header ----------
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const TITLES = { week: 'Week', exams: 'Exams', mensa: 'Campus', settings: 'Settings' };
 function renderHeader() {
   const now = new Date();
-  $('#hdrDate').textContent = DAYS[now.getDay()] + ', ' + now.getDate() + '.' + (now.getMonth() + 1) + '.' + now.getFullYear() + ' · ' + E.TERM.name;
+  if (view === 'today') {
+    const d = selDay ? E.parseYmd(selDay) : now;
+    const isToday = E.ymd(d) === E.ymd(now);
+    $('#hdrEyebrow').textContent = isToday ? 'Today · ' + DAYS[d.getDay()] : DAYS[d.getDay()];
+    $('#hdrTitle').textContent = d.getDate() + ' ' + MONTHS[d.getMonth()];
+  } else {
+    $('#hdrEyebrow').textContent = E.TERM.name;
+    $('#hdrTitle').textContent = TITLES[view] || '';
+  }
   const o = origin();
   $('#originChip').classList.toggle('live', !!(o && o.kind === 'gps'));
-  $('#originText').textContent = o ? (o.kind === 'gps' ? 'Live location' : 'From ' + o.label) : 'No address set';
+  $('#originText').textContent = o ? (o.kind === 'gps' ? 'Live' : o.label) : 'No address';
 }
+// One colour per course family (lecture + exercise share it).
+const HUES = [262, 22, 168, 212, 330, 140, 45, 290];
+function famKey(c) { const m = c.title.match(/\(([^)]+)\)/); return (m ? m[1] : c.title).toLowerCase().trim(); }
+function hueOf(c) {
+  if (c.hue != null) return c.hue;
+  const fams = []; S.courses.forEach(x => { const k = famKey(x); if (!fams.includes(k)) fams.push(k); });
+  const i = fams.indexOf(famKey(c)); return HUES[(i < 0 ? 0 : i) % HUES.length];
+}
+function shortTitle(c) { return c.title.replace(/\s*\([^)]*\)\s*/g, ' ').trim(); }
 
 // ---------- TODAY ----------
 function groupQuestions() {
@@ -245,86 +320,110 @@ function groupQuestions() {
   return out;
 }
 
+function dayItems(d) {
+  return E.occurrences(S, A, d, d, { allGroups: true }).filter(o => !(o.course.group && o.chosen && o.chosen !== o.course.group.option));
+}
+function evHTML(o, now) {
+  const past = o.end.getTime() < now, live = o.start.getTime() <= now && !past;
+  const tags = [typePill(o.course.type)];
+  if (o.course.group) tags.push('<span class="pill ' + (o.pending ? 'q' : '') + '">Group ' + h(o.course.group.option) + (o.pending ? '?' : '') + '</span>');
+  if (o.cancelled) tags.push('<span class="pill cx">Cancelled</span>');
+  if (o.changed) tags.push('<span class="pill chg">Changed</span>');
+  return '<button class="ev' + (past ? ' past' : '') + (live ? ' live' : '') + (o.cancelled ? ' cancel' : '') + '" style="--c:' + hueOf(o.course) + '" data-occ="' + h(o.id) + '">' +
+    '<div class="ev-time">' + E.hm(o.start) + '<span>' + E.hm(o.end) + '</span></div>' +
+    '<div class="ev-card"><div class="ev-title">' + h(shortTitle(o.course)) + '</div>' +
+    '<div class="ev-meta">' + h(o.room) + (o.course.lecturer ? ' · ' + h(o.course.lecturer) : '') + '</div>' +
+    '<div class="ev-tags">' + tags.join('') + '</div></div></button>';
+}
 function renderToday() {
-  const now = Date.now(), today = new Date();
-  let html = '';
-  // group questions
+  const now = Date.now(), today = new Date(), todayStr = E.ymd(today);
+  if (!selDay) selDay = todayStr;
+  const sel = E.parseYmd(selDay), isToday = selDay === todayStr;
+  let html = isToday ? updateCard() : '';
+
+  // week strip
+  const mon = E.mondayOf(sel);
+  html += '<div class="strip" role="group" aria-label="Pick a day">';
+  for (let i = 0; i < 7; i++) {
+    const d = E.addDays(mon, i), ds = E.ymd(d);
+    const n = E.inBreak(ds) ? 0 : dayItems(d).filter(o => !o.cancelled).length;
+    html += '<button class="sd' + (ds === todayStr ? ' today' : '') + (i > 4 && !n ? ' off' : '') + '" data-day="' + ds + '" aria-pressed="' + (ds === selDay) + '" aria-label="' + DAYS[d.getDay()] + ' ' + d.getDate() + ', ' + n + ' classes">' +
+      '<span class="wd">' + SHORT[d.getDay()].slice(0, 2) + '</span><span class="dn">' + d.getDate() + '</span><span class="dots">' + '<i></i>'.repeat(Math.min(n, 4)) + '</span></button>';
+  }
+  html += '</div>';
+  if (!isToday) html += '<div class="row" style="justify-content:center;margin-top:4px"><button class="small ghost" data-day="' + todayStr + '">Back to today</button></div>';
+
+  // group questions for today and tomorrow
   const qs = groupQuestions();
   if (qs.length) {
     html += '<h2>Choose your group</h2><div class="stack">';
     for (const q of qs) {
       const dflt = S.groupDefault[q.setId];
-      html += '<div class="card"><div class="row" style="justify-content:space-between"><h3 style="font-size:18px">' + h(E.GROUP_SETS[q.setId].name) + '</h3><span class="pill q">' + (q.off ? 'Tomorrow' : 'Today') + '</span></div>' +
-        '<p class="muted" style="margin:4px 0 10px">' + h(fmtDate(q.d)) + (dflt ? ' · default is group ' + h(dflt) : ' · no default group') + '</p><div class="row">' +
-        q.opts.map(o => '<button class="' + (dflt === o.course.group.option ? 'primary' : '') + '" data-ans="' + h(q.setId + '|' + q.ds + '|' + o.course.group.option) + '">Group ' + h(o.course.group.option) + ' · ' + E.hm(o.start) + '–' + E.hm(o.end) + '</button>').join('') +
+      html += '<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><h3 style="font-size:17px">' + h(E.GROUP_SETS[q.setId].name) + '</h3><span class="pill q">' + (q.off ? 'Tomorrow' : 'Today') + '</span></div>' +
+        '<p class="muted" style="margin:4px 0 12px">' + h(fmtDate(q.d)) + (dflt ? ' · default is group ' + h(dflt) : '') + '</p><div class="row">' +
+        q.opts.map(o => '<button class="' + (dflt === o.course.group.option ? 'primary' : 'tonal') + '" data-ans="' + h(q.setId + '|' + q.ds + '|' + o.course.group.option) + '">' + h(o.course.group.option) + ' · ' + E.hm(o.start) + '–' + E.hm(o.end) + '</button>').join('') +
         '</div></div>';
     }
     html += '</div>';
   }
 
-  // next target within 7 days
-  const targets = E.upcomingTargets(S, A, now, 24 * 7);
-  const nx = targets.find(t => t.start.getTime() > now - 0) ;
-  const ongoing = E.occurrences(S, A, today, today).find(o => !o.cancelled && !o.pending && o.start <= today && o.end > today);
-  html += '<h2>' + (ongoing ? 'In class now · next up' : 'Next up') + '</h2>';
-  if (ongoing) {
-    html += '<div class="card" style="margin-bottom:10px"><div class="row" style="justify-content:space-between"><strong>' + h(ongoing.course.title) + '</strong>' + typePill(ongoing.course.type) + '</div><p class="muted mono" style="margin-top:4px">until ' + E.hm(ongoing.end) + ' · ' + h(ongoing.room) + '</p></div>';
-  }
-  if (nx) {
-    const tr = E.travelFor(S, T, LOC, now, nx);
-    const leaveIn = tr ? tr.leaveAt - now : null;
-    const urgent = leaveIn != null && leaveIn < 15 * 60000;
-    const sameDay = E.ymd(nx.start) === E.ymd(today);
-    html += '<div class="card next' + (urgent ? ' urgent' : '') + '">' +
-      '<div class="row" style="justify-content:space-between;align-items:flex-start"><div style="min-width:0"><h3>' + h(nx.occ ? nx.occ.course.title : nx.title) + '</h3>' +
-      '<p class="muted" style="margin-top:3px">' + (nx.occ ? h(nx.occ.course.lecturer) : 'Exam') + '</p></div>' + (nx.occ ? typePill(nx.occ.course.type) : '<span class="pill cx">Exam</span>') + '</div>' +
-      '<div class="when" style="margin-top:12px">' + E.hm(nx.start) + ' <span>' + (sameDay ? 'today' : h(fmtDate(nx.start))) + ' · in ' + dur(nx.start - now) + '</span></div>' +
-      '<p style="margin-top:8px"><strong>' + h(nx.room) + '</strong> · ' + h(nx.place.name) + '</p><p class="mono muted">' + h(coord(nx.place)) + '</p>' +
-      (nx.pending ? '<p class="notice" style="margin-top:10px">Group not chosen yet. Showing the earlier group.</p>' : '') +
-      (nx.occ && nx.occ.changed ? '<p class="notice" style="margin-top:10px">Changed this week' + (nx.occ.note ? ': ' + h(nx.occ.note) : '') + '</p>' : '') +
-      '<dl class="leave">' +
-      (tr ? '<dt>Leave</dt><dd><span class="big">' + E.hm(new Date(tr.leaveAt)) + '</span> <span class="muted">' + (leaveIn > 0 ? 'in ' + dur(leaveIn) : 'now') + '</span></dd>' +
-        '<dt>Travel</dt><dd>' + tr.minutes + ' min · ' + h(tr.lines && tr.lines.length ? tr.lines.join(' → ') : (tr.source === 'bvg' ? 'walk' : 'estimate')) + '</dd>' +
-        '<dt>From</dt><dd>' + h(tr.origin) + (tr.source !== 'bvg' ? ' <span class="muted">(rough estimate)</span>' : '') + '</dd>'
-        : '<dt>Travel</dt><dd>Add your home address in Settings to get leave times.</dd>') +
-      '</dl><div class="row" style="margin-top:12px"><a class="btn ' + (urgent ? 'hot' : 'primary') + '" href="' + h(mapsLink(nx.place)) + '" target="_blank" rel="noopener">Route in Maps</a>' +
-      '<button id="refreshTravel">Refresh travel</button>' + (nx.occ ? '<button data-occ="' + h(nx.occ.id) + '">Details</button>' : '') + '</div></div>';
-  } else {
-    html += '<div class="empty">Nothing in the next 7 days.' + (E.inBreak(E.ymd(today)) ? ' Enjoy the break.' : '') + '</div>';
-  }
-
-  // today's list
-  const list = E.occurrences(S, A, today, today, { allGroups: true });
-  html += '<h2>' + DAYS[today.getDay()] + '</h2>';
-  if (E.inBreak(E.ymd(today))) html += '<div class="empty">Christmas break · lectures resume 4 January.</div>';
-  else if (!list.length) html += '<div class="empty">No classes today.</div>';
-  else {
-    html += '<ul class="tl">' + list.map(o => {
-      const past = o.end.getTime() < now, live = o.start.getTime() <= now && !past;
-      const otherGroup = o.course.group && o.chosen && o.chosen !== o.course.group.option;
-      if (otherGroup) return '';
-      return '<li class="' + (past ? 'past ' : '') + (live ? 'now ' : '') + (o.cancelled ? 'cancel' : '') + '"><button class="occ" data-occ="' + h(o.id) + '"><div><div class="time">' + E.hm(o.start) + '–' + E.hm(o.end) + '</div>' +
-        '<div class="t">' + h(o.course.title) + '</div><div class="mono muted">' + h(o.room) + (o.course.group ? ' · group ' + h(o.course.group.option) : '') + '</div></div>' +
-        '<div class="row" style="justify-content:flex-end">' + typePill(o.course.type) + (o.cancelled ? '<span class="pill cx">Cancelled</span>' : '') + (o.changed ? '<span class="pill chg">Changed</span>' : '') + (o.pending ? '<span class="pill q">Group?</span>' : '') + '</div></button></li>';
-    }).join('') + '</ul>';
-    // lunch gap
-    const real = list.filter(o => !o.cancelled && !(o.course.group && (o.pending ? o.course.group.option !== 'A' : o.chosen !== o.course.group.option)));
-    for (let i = 0; i < real.length - 1; i++) {
-      const gap = real[i + 1].start - real[i].end;
-      const gs = real[i].end, ge = real[i + 1].start;
-      if (gap >= 90 * 60000 && gs.getHours() < 15 && ge.getHours() >= 11) {
-        const walk = E.estimateMinutes(E.placeOf(S, real[i].course), E.BUILDINGS.MENSA);
-        html += '<div class="card row" style="justify-content:space-between;margin-top:4px"><div style="min-width:0"><strong>Free ' + E.hm(gs) + '–' + E.hm(ge) + '</strong><p class="muted">Mensa Hardenbergstraße is about ' + walk + ' min from ' + h(real[i].room) + '.</p></div><a class="btn" href="#mensa">See menu</a></div>';
-        break;
-      }
+  // next up (only on today)
+  if (isToday) {
+    const targets = E.upcomingTargets(S, A, now, 24 * 7);
+    const nx = targets.find(t => t.start.getTime() > now);
+    if (nx) {
+      const tr = E.travelFor(S, T, LOC, now, nx);
+      const leaveIn = tr ? tr.leaveAt - now : null;
+      const urgent = leaveIn != null && leaveIn < 15 * 60000;
+      const sameDay = E.ymd(nx.start) === todayStr;
+      const title = nx.occ ? shortTitle(nx.occ.course) : nx.title;
+      const pct = leaveIn == null ? 0 : Math.max(0, Math.min(100, 100 - leaveIn / (60 * 60000) * 100));
+      html += '<h2>Next up</h2><div class="card next' + (urgent ? ' urgent' : '') + '">' +
+        '<div class="lbl">' + (sameDay ? 'Starts in ' + dur(nx.start - now) : h(fmtDate(nx.start)) + ' · in ' + dur(nx.start - now)) + (nx.occ ? ' · ' + h(nx.occ.course.type) : ' · Exam') + '</div>' +
+        '<h3>' + h(title) + '</h3><p class="sub">' + E.hm(nx.start) + (nx.occ ? '–' + E.hm(nx.occ.end) : '') + ' · ' + h(nx.room) + ' · ' + h(nx.place.name) + '</p>' +
+        (nx.pending ? '<p class="notice" style="margin-top:10px">Group not chosen yet. Timed for the earlier group.</p>' : '') +
+        (nx.occ && nx.occ.changed ? '<p class="notice" style="margin-top:10px">Changed this week' + (nx.occ.note ? ': ' + h(nx.occ.note) : '') + '</p>' : '') +
+        (tr ? '<div class="leave"><div><div class="lbl">' + (leaveIn > 0 ? 'Leave at' : 'Leave now') + '</div><div class="big" style="margin-top:6px">' + E.hm(new Date(tr.leaveAt)) + '<small>' + (leaveIn > 0 ? 'in ' + dur(leaveIn) : 'now') + '</small></div></div></div>' +
+          '<div class="meter" aria-hidden="true"><span style="width:' + pct.toFixed(0) + '%"></span></div>' +
+          '<p class="trav">' + tr.minutes + ' min · ' + h(tr.lines && tr.lines.length ? tr.lines.join(' → ') : (tr.source === 'bvg' ? 'walk' : 'estimate')) + ' · from ' + h(tr.origin) + '</p>'
+          : '<p class="trav" style="margin-top:14px">Add your home address in Settings to get leave times.</p>') +
+        '<div class="acts"><a class="btn primary" href="' + h(mapsLink(nx.place)) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Directions</a>' +
+        '<button class="tonal" id="refreshTravel">Refresh</button>' + (nx.occ ? '<button class="tonal" data-occ="' + h(nx.occ.id) + '">Details</button>' : '') + '</div></div>';
     }
   }
 
+  // agenda for the selected day
+  const list = dayItems(sel);
+  const active = list.filter(o => !o.cancelled);
+  const hours = active.reduce((t, o) => t + (o.end - o.start), 0) / 3600000;
+  html += '<div class="sec-head"><h2>' + (isToday ? 'Today' : DAYS[sel.getDay()]) + '</h2><span class="mono muted">' + (active.length ? active.length + (active.length === 1 ? ' class' : ' classes') + ' · ' + (Math.round(hours * 10) / 10).toString().replace('.', ',') + ' h' : '') + '</span></div>';
+  if (E.inBreak(selDay)) html += '<div class="empty">Christmas break · lectures resume 4 January.</div>';
+  else if (!list.length) html += '<div class="empty">No classes' + (sel.getDay() % 6 === 0 ? ' on the weekend.' : '.') + '</div>';
+  else {
+    html += '<div class="agenda">';
+    let nowDone = !isToday;
+    const real = list.filter(o => !o.cancelled && !(o.pending && o.course.group.option !== 'A'));
+    list.forEach((o, i) => {
+      if (!nowDone && o.start.getTime() > now) { html += '<div class="nowline"><span>' + E.hm(new Date(now)) + '</span><i></i></div>'; nowDone = true; }
+      html += evHTML(o, now);
+      // free gap suggestion after this class
+      const ri = real.indexOf(o);
+      if (ri >= 0 && ri < real.length - 1) {
+        const gs = o.end, ge = real[ri + 1].start;
+        if (ge - gs >= 90 * 60000 && gs.getHours() < 15 && ge.getHours() >= 11) {
+          const walk = E.estimateMinutes(E.placeOf(S, o.course), E.BUILDINGS.MENSA);
+          html += '<a class="gap" href="#mensa"><span></span><div><span>Free ' + E.hm(gs) + '–' + E.hm(ge) + '</span><b>Mensa · ' + walk + ' min ›</b></div></a>';
+        }
+      }
+    });
+    if (!nowDone) html += '<div class="nowline"><span>' + E.hm(new Date(now)) + '</span><i></i></div>';
+    html += '</div>';
+  }
+
   // exams soon
-  const soon = S.exams.filter(x => x.date && E.parseYmd(x.date) >= E.parseYmd(E.ymd(today)) && E.parseYmd(x.date) - today < 21 * 86400000)
-    .sort((a, b) => a.date.localeCompare(b.date));
+  const soon = S.exams.filter(x => x.date && x.date >= todayStr && E.parseYmd(x.date) - today < 21 * 86400000).sort((a, b) => a.date.localeCompare(b.date));
   if (soon.length) {
-    html += '<h2>Exams in the next 3 weeks</h2><div class="stack">' + soon.map(x => '<div class="card row" style="justify-content:space-between"><div><strong>' + h(x.title) + '</strong><p class="muted mono">' + h(fmtDate(E.parseYmd(x.date))) + ' ' + h(x.time || '') + ' · ' + h(x.room || '') + '</p></div><span class="pill cx">' + h(dur(E.at(x.date, x.time || '09:00') - now)) + '</span></div>').join('') + '</div>';
+    html += '<h2>Exams soon</h2><div class="stack">' + soon.map(x => '<div class="card row" style="justify-content:space-between;flex-wrap:nowrap"><div style="min-width:0"><strong>' + h(x.title) + '</strong><p class="muted mono">' + h(fmtDate(E.parseYmd(x.date))) + ' ' + h(x.time || '') + ' · ' + h(x.room || '') + '</p></div><span class="pill cx">in ' + h(dur(E.at(x.date, x.time || '09:00') - now)) + '</span></div>').join('') + '</div>';
   }
   $('#v-today').innerHTML = html;
   const rb = $('#refreshTravel'); if (rb) rb.onclick = async () => { rb.disabled = true; rb.textContent = 'Checking BVG…'; T = {}; try { await E.kvSet('travel', {}); } catch (e) {} await runTick(true); };
@@ -336,26 +435,25 @@ function renderWeek() {
   const fri = E.addDays(mon, 4);
   const occ = E.occurrences(S, A, mon, fri, { allGroups: true });
   const todayStr = E.ymd(new Date());
-  let html = '<div class="weeknav"><button class="small" id="wPrev" aria-label="Previous week">←</button><div style="text-align:center"><strong>' + mon.getDate() + '.' + (mon.getMonth() + 1) + '. – ' + fri.getDate() + '.' + (fri.getMonth() + 1) + '.</strong><div class="mono muted">' + (weekOffset === 0 ? 'this week' : (weekOffset > 0 ? '+' : '') + weekOffset + ' week' + (Math.abs(weekOffset) > 1 ? 's' : '')) + '</div></div><button class="small" id="wNext" aria-label="Next week">→</button></div>';
-  if (weekOffset !== 0) html += '<div class="row" style="justify-content:center;margin-top:8px"><button class="small ghost" id="wToday">Back to this week</button></div>';
-  html += '<div class="stack" style="margin-top:14px">';
+  const arrow = d => '<svg viewBox="0 0 24 24"><path d="' + (d < 0 ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6') + '"/></svg>';
+  let html = '<div class="weeknav"><button class="icon-btn" id="wPrev" aria-label="Previous week">' + arrow(-1) + '</button><div style="text-align:center"><strong>' + mon.getDate() + ' ' + MONTHS[mon.getMonth()].slice(0, 3) + ' – ' + fri.getDate() + ' ' + MONTHS[fri.getMonth()].slice(0, 3) + '</strong><div class="mono muted">' + (weekOffset === 0 ? 'This week' : weekOffset === 1 ? 'Next week' : weekOffset === -1 ? 'Last week' : (weekOffset > 0 ? 'In ' + weekOffset + ' weeks' : -weekOffset + ' weeks ago')) + '</div></div><button class="icon-btn" id="wNext" aria-label="Next week">' + arrow(1) + '</button></div>';
+  if (weekOffset !== 0) html += '<div class="row" style="justify-content:center;margin-top:6px"><button class="small ghost" id="wToday">Back to this week</button></div>';
   for (let i = 0; i < 5; i++) {
     const d = E.addDays(mon, i), ds = E.ymd(d);
     const items = occ.filter(o => o.date === ds);
-    html += '<div class="day' + (ds === todayStr ? ' today' : '') + '"><header><span>' + DAYS[d.getDay()] + '</span><span class="mono">' + d.getDate() + '.' + (d.getMonth() + 1) + '.</span></header>';
-    if (E.inBreak(ds)) html += '<div class="slot" style="cursor:default"><span></span><span class="muted">Christmas break</span></div>';
-    else if (!items.length) html += '<div class="slot" style="cursor:default"><span></span><span class="muted">No classes</span></div>';
+    html += '<div class="wday"><div class="wday-h' + (ds === todayStr ? ' today' : '') + '">' + DAYS[d.getDay()] + ' <span>' + d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3) + '</span></div>';
+    if (E.inBreak(ds)) html += '<div class="wempty">Christmas break</div>';
+    else if (!items.length) html += '<div class="wempty">No classes</div>';
     items.forEach(o => {
       const other = o.course.group && o.chosen && o.chosen !== o.course.group.option;
-      html += '<button class="slot' + (other || o.cancelled ? ' dim' : '') + '" data-occ="' + h(o.id) + '"><div class="time">' + E.hm(o.start) + '<br><span class="muted">' + E.hm(o.end) + '</span></div><div>' +
-        '<div style="font-weight:600' + (o.cancelled ? ';text-decoration:line-through' : '') + '">' + h(o.course.title) + '</div><div class="mono muted">' + h(o.room) + ' · ' + h(o.course.lecturer) + '</div>' +
-        '<div class="row" style="margin-top:5px">' + typePill(o.course.type) + (o.course.group ? '<span class="pill ' + (o.pending ? 'q' : other ? 'ex' : 'lec') + '">Group ' + h(o.course.group.option) + (o.pending ? '?' : other ? '' : ' ✓') + '</span>' : '') +
-        (o.changed ? '<span class="pill chg">Changed</span>' : '') + (o.cancelled ? '<span class="pill cx">Cancelled</span>' : '') + '</div></div></button>';
+      html += '<button class="wrow' + (other ? ' dim' : '') + (o.cancelled ? ' cancel dim' : '') + '" style="--c:' + hueOf(o.course) + '" data-occ="' + h(o.id) + '"><span class="t">' + E.hm(o.start) + '</span><span class="n"><b>' + h(shortTitle(o.course)) + '</b><span>' + h(o.course.type) + ' · ' + h(o.room) + (o.course.group ? ' · group ' + h(o.course.group.option) + (o.pending ? '?' : other ? '' : ' ✓') : '') + '</span></span>' +
+        (o.changed ? '<span class="pill chg">Changed</span>' : '') + (o.cancelled ? '<span class="pill cx">Off</span>' : '') + '</button>';
     });
     html += '</div>';
   }
-  html += '</div><h2>Your courses</h2><div class="stack">' + S.courses.map(c => '<div class="card row" style="justify-content:space-between;flex-wrap:nowrap"><div style="min-width:0"><strong' + (c.enabled ? '' : ' class="muted"') + '>' + h(c.title) + '</strong><p class="mono muted">' + SHORT[c.day] + ' ' + h(c.start) + '–' + h(c.end) + ' · ' + h(c.room) + (c.group ? ' · grp ' + h(c.group.option) : '') + '</p></div><div class="row" style="flex-wrap:nowrap">' + typePill(c.type) + '<button class="small" data-edit="' + h(c.id) + '">Edit</button></div></div>').join('') +
-    '</div><div class="row" style="margin-top:12px"><button class="primary" id="addCourse">Add a course</button></div>';
+  html += '<div class="sec-head"><h2>Your courses</h2><span class="mono muted">' + S.courses.filter(c => c.enabled).length + ' active</span></div><div class="card stack" style="gap:14px">' + S.courses.map(c =>
+    '<div class="course" style="--c:' + hueOf(c) + (c.enabled ? '' : ';opacity:.5') + '"><span class="sw"></span><div><strong style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + h(shortTitle(c)) + '</strong><span class="mono muted">' + h(c.type) + ' · ' + SHORT[c.day] + ' ' + h(c.start) + '–' + h(c.end) + ' · ' + h(c.room) + (c.group ? ' · ' + h(c.group.option) : '') + '</span></div><button class="small" data-edit="' + h(c.id) + '">Edit</button></div>').join('') + '</div>' +
+    '<button class="fab" id="addCourse" aria-label="Add a course"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>';
   $('#v-week').innerHTML = html;
   $('#wPrev').onclick = () => { weekOffset--; renderWeek(); };
   $('#wNext').onclick = () => { weekOffset++; renderWeek(); };
@@ -658,7 +756,7 @@ function renderSettings() {
   const st = S.settings;
   const perm = ('Notification' in window) ? Notification.permission : 'unsupported';
   const standalone = matchMedia('(display-mode: standalone)').matches;
-  let html = '<h2 style="margin-top:6px">Addresses</h2><div class="stack">' + S.addresses.map((a, i) =>
+  let html = updateCard() + '<h2 style="margin-top:6px">Addresses</h2><div class="stack">' + S.addresses.map((a, i) =>
     '<div class="card set"><div class="row" style="justify-content:space-between"><label style="flex:1">Name<input id="aLabel' + i + '" value="' + h(a.label) + '"></label>' +
     '<label class="toggle" style="gap:8px;flex:none;margin-top:16px">Default<input type="radio" name="defAddr" value="' + h(a.id) + '"' + (S.defaultAddress === a.id ? ' checked' : '') + '></label></div>' +
     '<label>Address<input id="aText' + i + '" value="' + h(a.text) + '" placeholder="Street, number, Berlin"></label>' +
@@ -667,14 +765,14 @@ function renderSettings() {
     '<h2>Location</h2><div class="card set"><label class="toggle">Use my live location when the app is open<input type="checkbox" id="sLoc"' + (st.useLocation ? ' checked' : '') + '></label>' +
     '<p class="muted">Travel times use your position when it is fresh (under 20 minutes old), otherwise your default address.</p><p class="mono muted" id="locStatus">' + (LOC ? 'Last fix ' + dur(Date.now() - LOC.ts) + ' ago' : 'No location yet') + '</p></div>' +
 
-    '<h2>Reminders</h2><div class="card set"><div class="row" style="justify-content:space-between"><span>Notifications: <strong>' + h(perm) + '</strong></span>' +
-    (perm !== 'granted' && perm !== 'unsupported' ? '<button class="primary small" id="sAllow">Allow notifications</button>' : '<button class="small" id="sTest">Send a test</button>') + '</div>' +
+    '<h2>Reminders</h2><div class="card set">' + (NATIVE ? '<div class="row" style="justify-content:space-between"><span>Android alarms</span><button class="small" id="sTest">Send a test</button></div>' : '<div class="row" style="justify-content:space-between"><span>Notifications: <strong>' + h(perm) + '</strong></span>' +
+    (perm !== 'granted' && perm !== 'unsupported' ? '<button class="primary small" id="sAllow">Allow notifications</button>' : '<button class="small" id="sTest">Send a test</button>') + '</div>') +
     '<label class="toggle">Reminders on<input type="checkbox" id="sNotify"' + (st.notify ? ' checked' : '') + '></label>' +
     '<p class="muted">You get three alerts per class: two before the time you must leave, then a "Leave now" alert at that time.</p>' +
     '<div class="grid2"><label>First alert (min before leaving)<input type="number" id="sL1" min="5" max="240" value="' + st.leadFirst + '"></label><label>Second alert (min before leaving)<input type="number" id="sL2" min="5" max="180" value="' + st.leadSecond + '"></label></div>' +
     '<div class="grid2"><label>Stop to room (min)<input type="number" id="sBuf" min="0" max="30" value="' + st.bufferMin + '"></label><label>Ask for groups at<input type="time" id="sAsk" value="' + h(st.groupAskTime) + '"></label></div>' +
     '<div class="bgstat" id="bgStat"><p class="mono muted">Checking background reminders…</p></div>' +
-    '<p class="muted">Android decides when a web app may run in the background, often only a few times a day. For alarms that always ring on time, export your timetable to Samsung Calendar below.</p></div>' +
+    '<p class="muted">' + (NATIVE ? 'Reminders are set as Android alarms for the next 7 days, so they ring with the app closed. They refresh whenever you open the app or change something.' : 'Android decides when a web app may run in the background, often only a few times a day. For alarms that always ring on time, use the Android app or export your timetable to Samsung Calendar below.') + '</p></div>' +
 
     '<h2>Default groups</h2><div class="card set"><p class="muted">Used when you don\'t answer the evening question. You can still change any day.</p>' +
     Object.keys(E.GROUP_SETS).map(k => '<label>' + h(E.GROUP_SETS[k].name) + '<select data-gdef="' + k + '"><option value="">Ask every time</option><option' + (S.groupDefault[k] === 'A' ? ' selected' : '') + '>A</option><option' + (S.groupDefault[k] === 'B' ? ' selected' : '') + '>B</option></select></label>').join('') + '</div>' +
@@ -704,7 +802,7 @@ function renderSettings() {
   $('#sAsk').onchange = e => { st.groupAskTime = e.target.value || '19:00'; save(); };
   document.querySelectorAll('[data-gdef]').forEach(s => s.onchange = () => { if (s.value) S.groupDefault[s.dataset.gdef] = s.value; else delete S.groupDefault[s.dataset.gdef]; save(); render(); });
   const al = $('#sAllow'); if (al) al.onclick = enableNotifications;
-  const ts = $('#sTest'); if (ts) ts.onclick = () => showNote({ title: 'Leave now · Test', body: 'This is how a "Leave now" alert looks.', tag: 'test', urgent: true });
+  const ts = $('#sTest'); if (ts) ts.onclick = () => NATIVE ? Native.test().then(() => toast('Test alert in 4 seconds')) : showNote({ title: 'Leave now · Test', body: 'This is how a "Leave now" alert looks.', tag: 'test', urgent: true });
   $('#sIcs').onclick = exportIcs;
   fillBgStatus();
   $('#sBackup').onclick = () => shareOrDownload('ggs-timetable-backup.json', JSON.stringify({ state: S, answers: A }, null, 2), 'application/json');
@@ -718,8 +816,26 @@ function renderSettings() {
   $('#sResetYes').onclick = () => { S.courses = JSON.parse(JSON.stringify(E.SEED_COURSES)); S.overrides = {}; save(); render(); toast('Timetable reset'); };
 }
 
+function updateCard() {
+  if (!UPDATE) return '';
+  return '<div class="card next" style="margin-bottom:6px"><div class="lbl">Update available</div><h3>GGS Timetable ' + h(UPDATE.version) + '</h3><p class="sub">Download it and install it over the current app. Your data stays.</p><div class="acts"><a class="btn primary" href="' + h(UPDATE.url) + '" target="_blank" rel="noopener">Download update</a></div></div>';
+}
 async function fillBgStatus() {
   const box = $('#bgStat'); if (!box) return;
+  if (NATIVE) {
+    const st = await Native.status();
+    let last = null; try { last = await E.kvGet('lastSched'); } catch (e) {}
+    const next = st.pending.slice().sort((a, b) => new Date(a.schedule && a.schedule.at) - new Date(b.schedule && b.schedule.at))[0];
+    const okRow = (ok, text, btn) => '<div class="row" style="gap:8px;flex-wrap:nowrap;justify-content:space-between"><span class="row" style="gap:8px;flex-wrap:nowrap"><span class="pill ' + (ok ? 'lec' : 'cx') + '">' + (ok ? 'OK' : 'NO') + '</span><span>' + text + '</span></span>' + (btn || '') + '</div>';
+    box.innerHTML = '<div class="stack" style="gap:8px">' +
+      okRow(st.notify === 'granted', st.notify === 'granted' ? 'Notifications allowed' : 'Notifications are off', st.notify === 'granted' ? '' : '<button class="primary small" id="nAllow">Allow</button>') +
+      okRow(st.exact === 'granted', st.exact === 'granted' ? 'Exact alarm times allowed' : 'Alarms may come late', st.exact === 'granted' ? '' : '<button class="primary small" id="nExact">Allow</button>') +
+      okRow(st.pending.length > 0, st.pending.length + ' reminders scheduled' + (next && next.schedule ? ' · next ' + fmtDate(new Date(next.schedule.at)) + ' ' + E.hm(new Date(next.schedule.at)) : '')) +
+      '<p class="mono muted">' + (last ? 'Updated ' + dur(Date.now() - last.at) + ' ago' : '') + (st.app ? ' · app ' + h(st.app.version) + ' (' + h(st.app.build) + ')' : '') + '</p></div>';
+    const na = $('#nAllow'); if (na) na.onclick = async () => { await Native.requestNotify(); scheduleNative(); fillBgStatus(); };
+    const ne = $('#nExact'); if (ne) ne.onclick = async () => { await Native.openExactSettings(); setTimeout(fillBgStatus, 1500); };
+    return;
+  }
   const standalone = matchMedia('(display-mode: standalone)').matches;
   let registered = null, last = null;
   try { if (swReg && 'periodicSync' in swReg) registered = (await swReg.periodicSync.getTags()).includes('reminders'); } catch (e) {}
@@ -756,6 +872,80 @@ async function exportIcs() {
   await shareOrDownload('tu-ggs-timetable.ics', res.text, 'text/calendar');
 }
 
+// ---------- Android app: real alarms ----------
+async function addrMinutes(place, startDate) {
+  const a = S.addresses.find(x => x.id === S.defaultAddress);
+  if (!a || a.lat == null || place.lat == null) return null;
+  const ck = place.lat.toFixed(4) + ',' + place.lng.toFixed(4) + '|' + a.lat.toFixed(4) + ',' + a.lng.toFixed(4);
+  let cache = {}; try { cache = (await E.kvGet('addrTravel')) || {}; } catch (e) {}
+  const hit = cache[ck];
+  if (hit && Date.now() - hit.ts < 3 * 86400000) return Object.assign({ from: a.label }, hit);
+  let res;
+  try { const r = await E.bvgJourney({ lat: a.lat, lng: a.lng, label: a.label }, place, startDate); res = { min: r.minutes, lines: r.lines, src: 'bvg', ts: Date.now() }; }
+  catch (e) { res = { min: E.estimateMinutes(a, place), lines: [], src: 'estimate', ts: Date.now() - 3 * 86400000 + 3600000 }; } // retry in an hour
+  cache[ck] = res; try { await E.kvSet('addrTravel', cache); } catch (e) {}
+  return Object.assign({ from: a.label }, res);
+}
+// Everything that should ring in the next 7 days.
+async function buildNativeItems() {
+  const now = Date.now(), st = S.settings, items = [];
+  if (!st.notify) return items;
+  const a = S.addresses.find(x => x.id === S.defaultAddress);
+  for (const it of E.upcomingTargets(S, A, now, 24 * 7)) {
+    let m = null;
+    // Within the next 10 hours: live position or cached BVG result. Later: from the default address.
+    if (it.start - now < 10 * 3600000) {
+      const tr = E.travelFor(S, T, LOC, now, it);
+      if (tr && (tr.source === 'bvg' || !a || a.lat == null)) m = { min: tr.minutes, lines: tr.lines || [], src: tr.source, from: tr.origin };
+    }
+    if (!m) m = await addrMinutes(it.place, new Date(it.start - st.bufferMin * 60000));
+    const leave = it.start.getTime() - ((m ? m.min : 30) + st.bufferMin) * 60000;
+    const where = it.room ? it.room + ' · ' : '';
+    const how = m ? m.min + ' min' + (m.lines && m.lines.length ? ' by ' + m.lines.join(' → ') : m.src === 'bvg' ? ' on foot' : ' (estimate)') + ' from ' + m.from : 'Add your address in Settings for travel times';
+    const grp = it.pending ? ' Group not chosen yet.' : '';
+    items.push({ key: it.id + '|first', at: leave - st.leadFirst * 60000, title: 'Leave in ' + st.leadFirst + ' min · ' + it.title, body: 'Starts ' + E.hm(it.start) + ' · ' + where + how + '.' + grp });
+    items.push({ key: it.id + '|second', at: leave - st.leadSecond * 60000, title: 'Leave in ' + st.leadSecond + ' min · ' + it.title, body: 'Starts ' + E.hm(it.start) + ' · ' + where + how + '.' + grp });
+    items.push({ key: it.id + '|now', at: leave, title: 'Leave now · ' + it.title, body: 'Leave now to reach ' + (it.room || it.place.name) + ' by ' + E.hm(it.start) + '. ' + how + '.' + grp, urgent: true });
+  }
+  for (let off = 1; off <= 7; off++) {
+    const d = E.addDays(new Date(now), off), ds = E.ymd(d), eve = E.ymd(E.addDays(d, -1));
+    const sets = {};
+    E.occurrences(S, A, d, d, { allGroups: true }).filter(o => o.course.group && !o.cancelled).forEach(o => (sets[o.course.group.set] = sets[o.course.group.set] || []).push(o));
+    for (const setId in sets) {
+      if (A[setId + '|' + ds]) continue;
+      const opts = sets[setId].sort((x, y) => x.start - y.start);
+      items.push({ key: 'gq|' + setId + '|' + ds, at: E.at(eve, st.groupAskTime).getTime(), channel: 'ggs-info', group: { set: setId, date: ds },
+        title: 'Which group tomorrow? ' + E.GROUP_SETS[setId].name,
+        body: opts.map(o => 'Group ' + o.course.group.option + ': ' + E.hm(o.start) + '–' + E.hm(o.end) + ' ' + o.room).join(' · ') + (S.groupDefault[setId] ? ' (default ' + S.groupDefault[setId] + ')' : '') });
+    }
+  }
+  for (const ex of S.exams) {
+    if (!ex.date) continue;
+    const eve = E.ymd(E.addDays(E.parseYmd(ex.date), -1));
+    items.push({ key: 'exeve|' + ex.id, at: E.at(eve, st.examEveTime).getTime(), channel: 'ggs-info', hash: 'exams', title: 'Exam tomorrow: ' + ex.title, body: (ex.time || '') + ' ' + (ex.room || '') });
+  }
+  return items;
+}
+let schedTimer = null, schedBusy = false;
+function scheduleSoon() { if (!NATIVE) return; clearTimeout(schedTimer); schedTimer = setTimeout(scheduleNative, 1200); }
+async function scheduleNative() {
+  if (schedBusy) { scheduleSoon(); return; }
+  schedBusy = true;
+  try { const n = await Native.replaceAll(await buildNativeItems()); try { await E.kvSet('lastSched', { n, at: Date.now() }); } catch (e) {} }
+  catch (e) { console.log('schedule failed', e && e.message); }
+  schedBusy = false;
+  if (view === 'settings') fillBgStatus();
+}
+async function checkUpdate() {
+  if (!NATIVE) return;
+  try {
+    const [r, st] = await Promise.all([fetch('app-version.json', { cache: 'no-store' }), Native.status()]);
+    if (!r.ok || !st.app) return;
+    const v = await r.json();
+    if (Number(v.build) > Number(st.app.build)) { UPDATE = v; render(); }
+  } catch (e) {}
+}
+
 // ---------- notifications & location ----------
 async function showNote(a) {
   if (('Notification' in window) && Notification.permission === 'granted' && swReg) {
@@ -788,6 +978,13 @@ function startLocation() {
 let ticking = false;
 async function runTick(force) {
   if (ticking) return; ticking = true;
+  if (NATIVE) {
+    // The app's alarms are already scheduled; only refresh travel times and reschedule.
+    try { const tr = (await E.kvGet('travel')) || {}; T = await E.refreshTravel(S, A, tr, LOC, Date.now()); await E.kvSet('travel', T); A = (await E.kvGet('answers')) || A; } catch (e) {}
+    ticking = false; scheduleSoon();
+    if (view === 'today' || force) renderToday();
+    return;
+  }
   try { await E.tick(showNote, LOC); await reloadShared(); } catch (e) {}
   ticking = false;
   if (view === 'today' || force) renderToday();
@@ -812,6 +1009,7 @@ function route() {
   if (hsh === 'libraries') campusTab = 'libraries'; else if (hsh === 'mensa') campusTab = 'mensa';
   ['today', 'week', 'exams', 'mensa', 'settings'].forEach(v => { $('#v-' + v).hidden = v !== view; });
   document.querySelectorAll('nav.tabs a').forEach(a => { if (a.dataset.v === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  if (view === 'today') selDay = null;
   closeSheet(); render(); window.scrollTo(0, 0);
 }
 document.addEventListener('click', e => {
@@ -821,6 +1019,7 @@ document.addEventListener('click', e => {
     navigator.clipboard.writeText(t).then(() => toast('Address copied'), () => toast(t, 6000));
     return;
   }
+  const dy = e.target.closest('[data-day]'); if (dy) { selDay = dy.dataset.day; renderHeader(); renderToday(); return; }
   const dish = e.target.closest('[data-dish]'); if (dish) { cycleDish(dish); return; }
   const oc = e.target.closest('[data-occ]'); if (oc) { occSheet(oc.dataset.occ); return; }
   const ed = e.target.closest('[data-edit]'); if (ed) { editCourse(ed.dataset.edit); return; }
@@ -831,7 +1030,21 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) { re
 
 (async function boot() {
   try { const all = await E.loadAll(); S = all.state; A = all.answers; T = all.travel; LOC = all.loc; await save(); } catch (e) { idbOK = false; }
-  if ('serviceWorker' in navigator) {
+  if (NATIVE) {
+    Native.init({
+      onGroup: (setId, date, opt) => answer(setId, date, opt),
+      onOpen: hash => { if (location.hash !== '#' + hash) location.hash = hash; },
+      onResume: () => { reloadShared().then(() => { render(); runTick(); }); checkUpdate(); }
+    });
+    // Outside links (Maps, stw.berlin) open in their Android apps.
+    document.addEventListener('click', e => {
+      const a = e.target.closest('a[href]'); if (!a) return;
+      const u = new URL(a.getAttribute('href'), location.href);
+      if (u.origin !== location.origin) { e.preventDefault(); e.stopPropagation(); Native.openExternal(u.href); }
+    }, true);
+    Native.status().then(st => { if (st.notify !== 'granted') Native.requestNotify().then(scheduleSoon); });
+    checkUpdate(); scheduleSoon();
+  } else if ('serviceWorker' in navigator) {
     try {
       swReg = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
       navigator.serviceWorker.addEventListener('message', ev => {

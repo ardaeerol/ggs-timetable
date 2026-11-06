@@ -1,0 +1,19 @@
+{
+  "appId": "io.github.ardaeerol.ggs",
+  "appName": "GGS Timetable",
+  "webDir": "www",
+  "server": {
+    "url": "https://ardaeerol.github.io/ggs-timetable/",
+    "errorPath": "offline.html"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#F5F6F8"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_ggs",
+      "iconColor": "#0E7C7B"
+    }
+  }
+}
