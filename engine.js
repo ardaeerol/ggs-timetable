@@ -25,6 +25,7 @@
     HFT: { name: 'Hochfrequenztechnik building (HFT)', address: 'Einsteinufer 25, 10587 Berlin', maps: 'TU Berlin Hochfrequenztechnik HFT, Einsteinufer 25, 10587 Berlin', lat: 52.5174, lng: 13.3228 },
     MA:  { name: 'Mathematics building (MA)', address: 'Straße des 17. Juni 136, 10623 Berlin', maps: 'TU Berlin Mathematikgebäude, Straße des 17. Juni 136, 10623 Berlin', lat: 52.5133, lng: 13.3262 },
     H:   { name: 'Main building (H)', address: 'Straße des 17. Juni 135, 10623 Berlin', maps: 'TU Berlin Hauptgebäude, Straße des 17. Juni 135, 10623 Berlin', lat: 52.5125, lng: 13.3269 },
+    C:   { name: 'Chemistry building (C)', address: 'Straße des 17. Juni 115, 10623 Berlin', maps: 'TU Berlin Chemiegebäude, Straße des 17. Juni 115, 10623 Berlin', lat: 52.5126, lng: 13.3222 },
     VWH: { name: 'Volkswagen-Haus (University Library)', address: 'Fasanenstraße 88, 10623 Berlin', maps: 'Universitätsbibliothek TU Berlin, Fasanenstraße 88, 10623 Berlin', lat: 52.5107, lng: 13.3303 },
     EW:  { name: 'Eugene-Paul-Wigner building (EW)', address: 'Hardenbergstraße 36, 10623 Berlin', maps: 'TU Berlin Eugene-Paul-Wigner-Gebäude EW, Hardenbergstraße 36, 10623 Berlin', lat: 52.5114, lng: 13.3257 },
     TEL: { name: 'Telefunken high-rise (TEL)', address: 'Ernst-Reuter-Platz 7, 10587 Berlin', maps: 'TU Berlin Telefunken-Hochhaus, Ernst-Reuter-Platz 7, 10587 Berlin', lat: 52.5136, lng: 13.3196 },
