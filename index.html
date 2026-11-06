@@ -76,7 +76,13 @@ button:disabled{opacity:.6}
 .pill.chg,.pill.q{background:var(--warn-c);color:var(--warn)}
 .pill.cx{background:var(--bad-c);color:var(--bad)}
 /* week strip */
-.strip{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:4px 0 6px}
+.strip-scroll{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;margin:0 0 6px;-webkit-overflow-scrolling:touch}
+.strip-scroll::-webkit-scrollbar{display:none}
+.spage{flex:0 0 100%;scroll-snap-align:start;scroll-snap-stop:always;min-width:0}
+.scap{font:600 12px/1 var(--f-body);color:var(--muted);text-align:center;margin:2px 0 8px}
+.strip{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.swap{transition:opacity .15s}
+.swap.loading{opacity:.45}
 .sd{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 8px;border-radius:16px;background:transparent;min-height:0;color:var(--ink)}
 .sd .wd{font:600 11.5px/1 var(--f-body);color:var(--muted)}
 .sd .dn{font:700 18px/1.1 var(--f-display)}
@@ -181,8 +187,8 @@ body.kb{padding-bottom:16px}
 @media (prefers-reduced-motion: no-preference){
   .enter{animation:fadein .18s ease-out}
   @keyframes fadein{from{opacity:.0;transform:translateY(6px)}}
-  .slide-l{animation:sl .2s cubic-bezier(.2,.8,.2,1)} @keyframes sl{from{opacity:.3;transform:translateX(28px)}}
-  .slide-r{animation:sr .2s cubic-bezier(.2,.8,.2,1)} @keyframes sr{from{opacity:.3;transform:translateX(-28px)}}
+  .slide-l{animation:sl .22s cubic-bezier(.2,.8,.2,1)} @keyframes sl{from{opacity:.55;transform:translateX(18px)}}
+  .slide-r{animation:sr .22s cubic-bezier(.2,.8,.2,1)} @keyframes sr{from{opacity:.55;transform:translateX(-18px)}}
 }
 @media (min-width:720px){ .wrap{max-width:720px} nav.tabs{justify-content:center;gap:24px} .appbar h1{font-size:34px} }
 .fchips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
@@ -262,9 +268,9 @@ nav.tabs a[aria-current="page"] .ic{background:var(--pri-c);color:var(--on-pri-c
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="engine.js?v=20"></script>
-<script src="native.js?v=20"></script>
-<script src="food.js?v=20"></script>
+<script src="engine.js?v=21"></script>
+<script src="native.js?v=21"></script>
+<script src="food.js?v=21"></script>
 <script>
 'use strict';
 const E = window.Engine;
@@ -429,22 +435,55 @@ function evHTML(o, now) {
     '<div class="ev-meta">' + h(o.room) + (o.course.lecturer ? ' · ' + h(o.course.lecturer) : '') + '</div>' +
     '<div class="ev-tags">' + tags.join('') + '</div></div></button>';
 }
+// Week strip: the whole term as swipeable weeks. Swiping moves only the strip; tapping a day changes the page.
+let stripMon = null, stripScrollAt = 0;
+function stripHTML(sel, todayStr) {
+  const first = [E.parseYmd(E.TERM.lectureStart), new Date(), sel].reduce((a, b) => a < b ? a : b);
+  const last = [E.parseYmd(E.TERM.lectureEnd), new Date(), sel].reduce((a, b) => a > b ? a : b);
+  let html = '<div class="strip-scroll" id="strip" role="group" aria-label="Pick a day">';
+  for (let mon = E.mondayOf(E.addDays(first, -7)); mon <= E.addDays(last, 7); mon = E.addDays(mon, 7)) {
+    const sun = E.addDays(mon, 6);
+    html += '<div class="spage" data-mon="' + E.ymd(mon) + '"><div class="scap">' + mon.getDate() + ' ' + MONTHS[mon.getMonth()].slice(0, 3) + ' – ' + sun.getDate() + ' ' + MONTHS[sun.getMonth()].slice(0, 3) + (sun.getFullYear() !== new Date().getFullYear() ? ' ' + sun.getFullYear() : '') + '</div><div class="strip">';
+    for (let i = 0; i < 7; i++) {
+      const d = E.addDays(mon, i), ds = E.ymd(d);
+      const n = E.inBreak(ds) ? 0 : dayItems(d).filter(o => !o.cancelled).length;
+      html += '<button class="sd' + (ds === todayStr ? ' today' : '') + (i > 4 && !n ? ' off' : '') + '" data-day="' + ds + '" aria-pressed="' + (ds === selDay) + '" aria-label="' + DAYS[d.getDay()] + ' ' + d.getDate() + ', ' + n + ' classes">' +
+        '<span class="wd">' + SHORT[d.getDay()].slice(0, 2) + '</span><span class="dn">' + d.getDate() + '</span><span class="dots">' + '<i></i>'.repeat(Math.min(n, 4)) + '</span></button>';
+    }
+    html += '</div></div>';
+  }
+  return html + '</div>';
+}
+function placeStrip() {
+  const el = $('#strip'); if (!el) return;
+  const want = stripMon || E.ymd(E.mondayOf(E.parseYmd(selDay)));
+  const pages = [...el.querySelectorAll('.spage')];
+  const i = Math.max(0, pages.findIndex(p => p.dataset.mon === want));
+  el.scrollLeft = i * el.clientWidth;
+  let t = null;
+  el.addEventListener('scroll', () => {
+    stripScrollAt = Date.now();
+    clearTimeout(t);
+    t = setTimeout(() => { const k = Math.round(el.scrollLeft / el.clientWidth); if (pages[k]) stripMon = pages[k].dataset.mon; }, 120);
+  }, { passive: true });
+}
+function pickDay(ds) {
+  const prev = selDay || E.ymd(new Date());
+  if (ds === prev) return;
+  selDay = ds; stripMon = E.ymd(E.mondayOf(E.parseYmd(ds)));
+  const y = window.scrollY;
+  renderHeader(); renderToday();
+  window.scrollTo(0, y);
+  slideIn('#tBody', ds > prev ? 1 : -1);
+}
 function renderToday() {
   const now = Date.now(), today = new Date(), todayStr = E.ymd(today);
   if (!selDay) selDay = todayStr;
   const sel = E.parseYmd(selDay), isToday = selDay === todayStr;
   let html = isToday ? updateCard() : '';
 
-  // week strip
-  const mon = E.mondayOf(sel);
-  html += '<div class="strip" role="group" aria-label="Pick a day">';
-  for (let i = 0; i < 7; i++) {
-    const d = E.addDays(mon, i), ds = E.ymd(d);
-    const n = E.inBreak(ds) ? 0 : dayItems(d).filter(o => !o.cancelled).length;
-    html += '<button class="sd' + (ds === todayStr ? ' today' : '') + (i > 4 && !n ? ' off' : '') + '" data-day="' + ds + '" aria-pressed="' + (ds === selDay) + '" aria-label="' + DAYS[d.getDay()] + ' ' + d.getDate() + ', ' + n + ' classes">' +
-      '<span class="wd">' + SHORT[d.getDay()].slice(0, 2) + '</span><span class="dn">' + d.getDate() + '</span><span class="dots">' + '<i></i>'.repeat(Math.min(n, 4)) + '</span></button>';
-  }
-  html += '</div>';
+  html += stripHTML(sel, todayStr);
+  html += '<div id="tBody" class="swap">';
   if (!isToday) html += '<div class="row" style="justify-content:center;margin-top:4px"><button class="small ghost" data-day="' + todayStr + '">Back to today</button></div>';
 
   // group questions for today and tomorrow
@@ -521,20 +560,19 @@ function renderToday() {
   if (soon.length) {
     html += '<h2>Exams soon</h2><div class="stack">' + soon.map(x => examCard(x)).join('') + '</div>';
   }
+  html += '</div>';
   $('#v-today').innerHTML = html;
+  placeStrip();
   fillGapPicks();
   const rb = $('#refreshTravel'); if (rb) rb.onclick = async () => { rb.disabled = true; rb.textContent = 'Checking BVG…'; T = {}; try { await E.kvSet('travel', {}); } catch (e) {} await runTick(true); };
 }
 
 // ---------- WEEK ----------
-function renderWeek() {
-  const mon = E.addDays(E.mondayOf(new Date()), weekOffset * 7);
-  const fri = E.addDays(mon, 4);
+function weekDaysHTML() {
+  const mon = E.addDays(E.mondayOf(new Date()), weekOffset * 7), fri = E.addDays(mon, 4);
   const occ = E.occurrences(S, A, mon, fri, { allGroups: true });
   const todayStr = E.ymd(new Date());
-  const arrow = d => '<svg viewBox="0 0 24 24"><path d="' + (d < 0 ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6') + '"/></svg>';
-  let html = '<div class="weeknav"><button class="icon-btn" id="wPrev" aria-label="Previous week">' + arrow(-1) + '</button><div style="text-align:center"><strong>' + mon.getDate() + ' ' + MONTHS[mon.getMonth()].slice(0, 3) + ' – ' + fri.getDate() + ' ' + MONTHS[fri.getMonth()].slice(0, 3) + '</strong><div class="mono muted">' + (weekOffset === 0 ? 'This week' : weekOffset === 1 ? 'Next week' : weekOffset === -1 ? 'Last week' : (weekOffset > 0 ? 'In ' + weekOffset + ' weeks' : -weekOffset + ' weeks ago')) + '</div></div><button class="icon-btn" id="wNext" aria-label="Next week">' + arrow(1) + '</button></div>';
-  if (weekOffset !== 0) html += '<div class="row" style="justify-content:center;margin-top:6px"><button class="small ghost" id="wToday">Back to this week</button></div>';
+  let html = '';
   for (let i = 0; i < 5; i++) {
     const d = E.addDays(mon, i), ds = E.ymd(d);
     const items = occ.filter(o => o.date === ds);
@@ -548,13 +586,31 @@ function renderWeek() {
     });
     html += '</div>';
   }
-  html += '<div class="sec-head"><h2>Your courses</h2><span class="mono muted">' + S.courses.filter(c => c.enabled).length + ' active</span></div><div class="card stack" style="gap:14px">' + S.courses.map(c =>
+  return html;
+}
+function weekHeader() {
+  const mon = E.addDays(E.mondayOf(new Date()), weekOffset * 7), fri = E.addDays(mon, 4);
+  $('#wRange').textContent = mon.getDate() + ' ' + MONTHS[mon.getMonth()].slice(0, 3) + ' – ' + fri.getDate() + ' ' + MONTHS[fri.getMonth()].slice(0, 3);
+  $('#wRel').textContent = weekOffset === 0 ? 'This week' : weekOffset === 1 ? 'Next week' : weekOffset === -1 ? 'Last week' : (weekOffset > 0 ? 'In ' + weekOffset + ' weeks' : -weekOffset + ' weeks ago');
+  $('#wToday').hidden = weekOffset === 0;
+}
+function shiftWeek(dir) {
+  weekOffset = dir === 0 ? 0 : weekOffset + dir;
+  if (!$('#wDays')) { renderWeek(); return; }
+  weekHeader(); $('#wDays').innerHTML = weekDaysHTML(); if (dir) slideIn('#wDays', dir);
+}
+function renderWeek() {
+  const arrow = d => '<svg viewBox="0 0 24 24"><path d="' + (d < 0 ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6') + '"/></svg>';
+  $('#v-week').innerHTML = '<div class="weeknav"><button class="icon-btn" id="wPrev" aria-label="Previous week">' + arrow(-1) + '</button><div style="text-align:center"><strong id="wRange"></strong><div class="mono muted" id="wRel"></div></div><button class="icon-btn" id="wNext" aria-label="Next week">' + arrow(1) + '</button></div>' +
+    '<div class="row" style="justify-content:center;margin-top:6px" id="wToday" hidden><button class="small ghost" id="wTodayBtn">Back to this week</button></div>' +
+    '<div id="wDays" class="swap">' + weekDaysHTML() + '</div>' +
+    '<div class="sec-head"><h2>Your courses</h2><span class="mono muted">' + S.courses.filter(c => c.enabled).length + ' active</span></div><div class="card stack" style="gap:14px">' + S.courses.map(c =>
     '<div class="course" style="--c:' + hueOf(c) + (c.enabled ? '' : ';opacity:.5') + '"><span class="sw"></span><div><strong style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + h(shortTitle(c)) + '</strong><span class="mono muted">' + h(c.type) + ' · ' + SHORT[c.day] + ' ' + h(c.start) + '–' + h(c.end) + ' · ' + h(c.room) + (c.group ? ' · ' + h(c.group.option) : '') + '</span></div><button class="small" data-edit="' + h(c.id) + '">Edit</button></div>').join('') + '</div>' +
     '<button class="fab" id="addCourse" aria-label="Add a course"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>';
-  $('#v-week').innerHTML = html;
-  $('#wPrev').onclick = () => { weekOffset--; renderWeek(); };
-  $('#wNext').onclick = () => { weekOffset++; renderWeek(); };
-  const wt = $('#wToday'); if (wt) wt.onclick = () => { weekOffset = 0; renderWeek(); };
+  weekHeader();
+  $('#wPrev').onclick = () => shiftWeek(-1);
+  $('#wNext').onclick = () => shiftWeek(1);
+  $('#wTodayBtn').onclick = () => { const dir = weekOffset > 0 ? -1 : 1; shiftWeek(0); slideIn('#wDays', dir); };
   $('#addCourse').onclick = () => editCourse(null);
 }
 
@@ -775,7 +831,7 @@ async function showDish(btn) {
     '</div><p class="muted" style="margin-top:14px;font-size:13px">Machine translation. When a name looks odd, trust the German. Liked dishes move up in your picks.</p><div class="row" style="margin-top:14px"><button class="' + (isLiked(de) ? 'primary' : 'tonal') + '" id="trLike">' + (isLiked(de) ? '♥ Liked' : '♡ Like') + '</button><button class="ghost" id="trClose">Close</button></div>',
     () => {
       $('#trClose').onclick = closeSheet;
-      $('#trLike').onclick = () => { const on = toggleLike(de); const b = $('#trLike'); b.className = on ? 'primary' : 'tonal'; b.textContent = on ? '♥ Liked' : '♡ Like'; toast(on ? 'Liked. It will move up when it is on the menu.' : 'Removed from liked'); if (view === 'mensa') renderMensa(); };
+      $('#trLike').onclick = () => { const on = toggleLike(de); const b = $('#trLike'); b.className = on ? 'primary' : 'tonal'; b.textContent = on ? '♥ Liked' : '♡ Like'; toast(on ? 'Liked. It will move up when it is on the menu.' : 'Removed from liked'); if (view === 'mensa') updateMensaDay(0); };
     });
   for (const [lang, id] of [['en', '#trEn'], ['tr', '#trTr']]) {
     translate(de, lang).then(t => { const el = $(id); if (el) el.textContent = t || 'Not available right now'; });
@@ -884,31 +940,21 @@ async function fillGapPicks() {
     if (rec.pick && el.isConnected) el.textContent = 'Pick: ' + rec.pick.m.name + (rec.pick.price != null ? ' · ' + eur(rec.pick.price) : '');
   } catch (e) {}
 }
-async function renderMensa() {
-  if (campusTab === 'libraries') { renderLibraries(); if (!libFixFresh()) askLibFix(false); return; }
-  let d = E.addDays(new Date(), mensaDay);
-  const ds = E.ymd(d);
-  let html = campusSwitch() + '<div class="weeknav" style="margin-top:12px"><button class="small" id="mPrev" aria-label="Previous day">←</button><div style="text-align:center"><strong>' + DAYS[d.getDay()] + ' ' + d.getDate() + '.' + (d.getMonth() + 1) + '.</strong><div class="mono muted">Mensa TU Hardenbergstraße</div></div><button class="small" id="mNext" aria-label="Next day">→</button></div>' +
-    '<div class="fchips" id="mPrefs" role="group" aria-label="Food preferences"></div>' +
-    '<div id="mBody" style="margin-top:12px"><div class="empty">Loading the menu…</div></div>' +
-    '<div class="row" style="margin-top:14px"><a class="btn" target="_blank" rel="noopener" href="' + STW + '">Full menu on stw.berlin</a><a class="btn" target="_blank" rel="noopener" href="' + h(mapsLink(E.BUILDINGS.MENSA)) + '">Route to Mensa</a></div>' +
-    '<p class="muted mono" style="margin-top:10px">Hardenbergstraße 34 · data via OpenMensa</p>';
-  $('#v-mensa').innerHTML = html;
-  $('#mPrev').onclick = () => { mensaDay--; renderMensa(); };
-  $('#mNext').onclick = () => { mensaDay++; renderMensa(); };
-  const body = $('#mBody');
+function mensaDate() { return E.addDays(new Date(), mensaDay); }
+function renderMensaPrefs() {
+  const prefs = foodPrefs(), box = $('#mPrefs'); if (!box) return;
+  box.innerHTML = PREF_LABELS.map(([k, l]) => '<button class="fchip" data-fpref="' + k + '" aria-pressed="' + !!prefs[k] + '">' + (prefs[k] ? '✓ ' : '') + l + '</button>').join('');
+}
+function mensaBodyHTML(meals) {
   const prefs = foodPrefs();
-  $('#mPrefs').innerHTML = PREF_LABELS.map(([k, l]) => '<button class="fchip" data-fpref="' + k + '" aria-pressed="' + !!prefs[k] + '">' + (prefs[k] ? '✓ ' : '') + l + '</button>').join('');
-  try {
-    const meals = await getMeals(ds);
-    if (!meals.length) { body.innerHTML = '<div class="empty">No menu for this day. The Mensa may be closed.</div>'; return; }
-    const rec = Food.recommend(meals, prefs);
-    const cats = {};
-    meals.forEach(m => (cats[m.category || 'Other'] = cats[m.category || 'Other'] || []).push(m));
-    let n = 0;
-    body.innerHTML = pickCard(rec, prefs) +
-      '<p class="muted" style="margin:12px 2px 10px;font-size:13px">Most protein for the price. Protein is estimated from the dish name; for sausages and mince, check the counter label for pork. Hold a dish for English, Turkish and ♥.</p><div class="stack">' +
-      Object.keys(cats).map(cat => '<div class="card"><h2 style="margin:0 0 6px">' + h(cat) + '</h2>' + cats[cat].map(m => {
+  if (!meals.length) return '<div class="empty">No menu for this day. The Mensa may be closed.</div>';
+  const rec = Food.recommend(meals, prefs);
+  const cats = {};
+  meals.forEach(m => (cats[m.category || 'Other'] = cats[m.category || 'Other'] || []).push(m));
+  let n = 0;
+  return pickCard(rec, prefs) +
+    '<p class="muted" style="margin:12px 2px 10px;font-size:13px">Most protein for the price. Protein is estimated from the dish name; for sausages and mince, check the counter label for pork. Hold a dish for English, Turkish and ♥.</p><div class="stack">' +
+    Object.keys(cats).map(cat => '<div class="card"><h2 style="margin:0 0 6px">' + h(cat) + '</h2>' + cats[cat].map(m => {
       const p = Food.priceOf(m), pork = Food.porkOf(m), pr = Food.proteinOf(m);
       const veg = (m.notes || []).some(x => /vegan/i.test(x)) ? 'vegan' : (m.notes || []).some(x => /vegetar/i.test(x)) ? 'vegetarian' : '';
       const tags = (veg ? '<span class="pill lec">' + veg + '</span>' : '') + (pr.level === 3 ? '<span class="pill ex">protein</span>' : '') + (isLiked(m.name) ? '<span class="pill lec">♥</span>' : '') +
@@ -916,9 +962,40 @@ async function renderMensa() {
       const i = n++;
       return '<button class="meal dish" data-dish="' + i + '" data-de="' + h(m.name) + '" aria-label="' + h(m.name) + '. Press and hold for English and Turkish"><div style="min-width:0"><span class="dname">' + h(m.name) + '</span>' + (tags ? ' <span class="dtags">' + tags + '</span>' : '') + '</div><div class="price">' + (p != null ? eur(p) : '') + '</div></button>';
     }).join('') + '</div>').join('') + '</div>';
-  } catch (e) {
-    body.innerHTML = '<div class="empty">Could not load the menu (' + h(e.message) + '). Open the full menu on stw.berlin instead.</div>';
-  }
+}
+let mensaSeq = 0;
+// Change only the date label and the menu below it; neighbouring days are fetched ahead so swipes are instant.
+async function updateMensaDay(dir) {
+  const d = mensaDate(), ds = E.ymd(d), body = $('#mBody'), label = $('#mDay');
+  if (!body || !label) return;
+  label.textContent = DAYS[d.getDay()] + ' ' + d.getDate() + '.' + (d.getMonth() + 1) + '.';
+  const seq = ++mensaSeq;
+  const cached = mealCache[ds] && Date.now() - mealCache[ds].ts < 30 * 60000;
+  if (!cached) { body.classList.add('loading'); if (!body.firstChild) body.innerHTML = '<div class="empty">Loading the menu…</div>'; }
+  let html;
+  try { html = mensaBodyHTML(await getMeals(ds)); }
+  catch (e) { html = '<div class="empty">Could not load the menu (' + h(e.message) + '). Open the full menu on stw.berlin instead.</div>'; }
+  if (seq !== mensaSeq || !body.isConnected) return;
+  body.classList.remove('loading');
+  body.innerHTML = html;
+  if (dir) slideIn('#mBody', dir);
+  [-1, 1].forEach(k => getMeals(E.ymd(E.addDays(d, k))).catch(() => {}));
+}
+function shiftMensa(dir) { mensaDay += dir; updateMensaDay(dir); }
+async function renderMensa() {
+  if (campusTab === 'libraries') { renderLibraries(); if (!libFixFresh()) askLibFix(false); return; }
+  if ($('#mBody')) { renderMensaPrefs(); updateMensaDay(0); return; } // shell already there
+  const arrow = d => '<svg viewBox="0 0 24 24"><path d="' + (d < 0 ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6') + '"/></svg>';
+  $('#v-mensa').innerHTML = campusSwitch() +
+    '<div class="weeknav" style="margin-top:12px"><button class="icon-btn" id="mPrev" aria-label="Previous day">' + arrow(-1) + '</button><div style="text-align:center"><strong id="mDay"></strong><div class="mono muted">Mensa TU Hardenbergstraße</div></div><button class="icon-btn" id="mNext" aria-label="Next day">' + arrow(1) + '</button></div>' +
+    '<div class="fchips" id="mPrefs" role="group" aria-label="Food preferences"></div>' +
+    '<div id="mBody" class="swap" style="margin-top:12px"></div>' +
+    '<div class="row" style="margin-top:14px"><a class="btn" target="_blank" rel="noopener" href="' + STW + '">Full menu on stw.berlin</a><a class="btn" target="_blank" rel="noopener" href="' + h(mapsLink(E.BUILDINGS.MENSA)) + '">Route to Mensa</a></div>' +
+    '<p class="muted mono" style="margin-top:10px">Hardenbergstraße 34 · data via OpenMensa</p>';
+  $('#mPrev').onclick = () => shiftMensa(-1);
+  $('#mNext').onclick = () => shiftMensa(1);
+  renderMensaPrefs();
+  updateMensaDay(0);
 }
 
 // ---------- SETTINGS ----------
@@ -1169,12 +1246,12 @@ async function runTick(force) {
     // The app's alarms are already scheduled; only refresh travel times and reschedule.
     try { const tr = (await E.kvGet('travel')) || {}; T = await E.refreshTravel(S, A, tr, LOC, Date.now()); await E.kvSet('travel', T); A = (await E.kvGet('answers')) || A; } catch (e) {}
     ticking = false; scheduleSoon();
-    if (view === 'today' || force) renderToday();
+    if ((view === 'today' && Date.now() - stripScrollAt > 2000) || force) renderToday();
     return;
   }
   try { await E.tick(showNote, LOC); await reloadShared(); } catch (e) {}
   ticking = false;
-  if (view === 'today' || force) renderToday();
+  if ((view === 'today' && Date.now() - stripScrollAt > 2000) || force) renderToday();
 }
 
 // ---------- routing & events ----------
@@ -1198,7 +1275,7 @@ function route() {
   if (hsh === 'libraries') campusTab = 'libraries'; else if (hsh === 'mensa') campusTab = 'mensa';
   ['today', 'week', 'exams', 'mensa', 'settings'].forEach(v => { $('#v-' + v).hidden = v !== view; });
   document.querySelectorAll('nav.tabs a').forEach(a => { if (a.dataset.v === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-  if (view === 'today') selDay = null;
+  if (view === 'today') { selDay = null; stripMon = null; }
   $('#sheetHost').innerHTML = ''; render();
   const sec = $('#v-' + view);
   if (sec && !matchMedia('(prefers-reduced-motion: reduce)').matches) { sec.classList.remove('enter'); void sec.offsetWidth; sec.classList.add('enter'); }
@@ -1211,8 +1288,8 @@ document.addEventListener('click', e => {
     navigator.clipboard.writeText(t).then(() => toast('Address copied'), () => toast(t, 6000));
     return;
   }
-  const fp = e.target.closest('[data-fpref]'); if (fp) { const k = fp.dataset.fpref; { const fp0 = foodPrefs(); delete fp0.liked; S.settings.foodPrefs = Object.assign(fp0, { [k]: !fp0[k] }); } save(); renderMensa(); return; }
-  const dy = e.target.closest('[data-day]'); if (dy) { selDay = dy.dataset.day; renderHeader(); renderToday(); return; }
+  const fp = e.target.closest('[data-fpref]'); if (fp) { const k = fp.dataset.fpref; { const fp0 = foodPrefs(); delete fp0.liked; S.settings.foodPrefs = Object.assign(fp0, { [k]: !fp0[k] }); } save(); renderMensaPrefs(); updateMensaDay(0); return; }
+  const dy = e.target.closest('[data-day]'); if (dy) { pickDay(dy.dataset.day); return; }
   const dish = e.target.closest('[data-dish]'); if (dish) { if (!pressFired && e.detail === 0) showDish(dish); pressFired = false; return; }
   const xo = e.target.closest('[data-exam-open]'); if (xo) { examSheet(xo.dataset.examOpen); return; }
   const cardEx = e.target.closest('[data-card-exam]'); if (cardEx && !e.target.closest('a,button')) { examSheet(cardEx.dataset.cardExam); return; }
@@ -1234,11 +1311,11 @@ document.addEventListener('keydown', e => {
 // Hide the bottom bar while typing.
 document.addEventListener('focusin', e => { if (e.target.matches('input:not([type=checkbox]):not([type=radio]):not([type=file]),textarea')) document.body.classList.add('kb'); });
 document.addEventListener('focusout', () => setTimeout(() => { if (!document.activeElement || !document.activeElement.matches('input,textarea')) document.body.classList.remove('kb'); }, 120));
-// Swipe left/right: next or previous day (Today, Mensa) or week (Week).
+// Swipe left/right on Mensa (day) and Week (week) does what the arrows do. Today swipes only its date strip.
 (function () {
   let sx = null, sy = 0, st = 0;
   document.addEventListener('touchstart', e => {
-    if ($('#sheetHost').querySelector('.sheet') || e.touches.length !== 1 || e.target.closest('input,textarea,select,.seg,nav.tabs')) { sx = null; return; }
+    if ($('#sheetHost').querySelector('.sheet') || e.touches.length !== 1 || e.target.closest('input,textarea,select,.seg,nav.tabs,.strip-scroll')) { sx = null; return; }
     sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = Date.now();
   }, { passive: true });
   document.addEventListener('touchend', e => {
@@ -1246,9 +1323,8 @@ document.addEventListener('focusout', () => setTimeout(() => { if (!document.act
     const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; sx = null;
     if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 0.6 || Date.now() - st > 700) return;
     const dir = dx < 0 ? 1 : -1;
-    if (view === 'today') { selDay = E.ymd(E.addDays(E.parseYmd(selDay || E.ymd(new Date())), dir)); slideIn('#v-today', dir); renderHeader(); renderToday(); }
-    else if (view === 'week') { weekOffset += dir; slideIn('#v-week', dir); renderWeek(); }
-    else if (view === 'mensa' && campusTab === 'mensa') { mensaDay += dir; slideIn('#v-mensa', dir); renderMensa(); }
+    if (view === 'week') shiftWeek(dir);
+    else if (view === 'mensa' && campusTab === 'mensa') shiftMensa(dir);
   }, { passive: true });
 })();
 function slideIn(sel, dir) {
