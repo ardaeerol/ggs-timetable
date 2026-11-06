@@ -155,7 +155,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);outline:none}
 .result{display:block;width:100%;text-align:left;font-weight:500;border-radius:14px}
 /* campus */
 .meal{display:flex;justify-content:space-between;gap:12px;padding:10px 0}
-.dish{width:100%;text-align:left;background:none;border-top:1px solid var(--line);border-radius:0;min-height:0;font:inherit;color:inherit;cursor:pointer;padding:11px 0}
+.trow{display:flex;gap:12px;align-items:flex-start}
+.trow .pill{margin-top:2px}
+.tname{font:600 16px/1.35 var(--f-body)}
+.dish{width:100%;-webkit-touch-callout:none;user-select:none;text-align:left;background:none;border-top:1px solid var(--line);border-radius:0;min-height:0;font:inherit;color:inherit;cursor:pointer;padding:11px 0}
 .card h2+.dish{border-top:0}
 .meal .price{font:600 13.5px/1.3 var(--f-body);white-space:nowrap}
 .seg{display:flex;background:var(--surface-2);border-radius:999px;padding:4px;gap:4px}
@@ -209,8 +212,8 @@ nav.tabs a[aria-current="page"] .ic{background:var(--pri-c);color:var(--on-pri-c
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="engine.js?v=11"></script>
-<script src="native.js?v=11"></script>
+<script src="engine.js?v=12"></script>
+<script src="native.js?v=12"></script>
 <script>
 'use strict';
 const E = window.Engine;
@@ -385,7 +388,9 @@ function renderToday() {
         (nx.occ && nx.occ.changed ? '<p class="notice" style="margin-top:10px">Changed this week' + (nx.occ.note ? ': ' + h(nx.occ.note) : '') + '</p>' : '') +
         (tr ? '<div class="leave"><div><div class="lbl">' + (leaveIn > 0 ? 'Leave at' : 'Leave now') + '</div><div class="big" style="margin-top:6px">' + E.hm(new Date(tr.leaveAt)) + '<small>' + (leaveIn > 0 ? 'in ' + dur(leaveIn) : 'now') + '</small></div></div></div>' +
           '<div class="meter" aria-hidden="true"><span style="width:' + pct.toFixed(0) + '%"></span></div>' +
-          '<p class="trav">' + tr.minutes + ' min · ' + h(tr.lines && tr.lines.length ? tr.lines.join(' → ') : (tr.source === 'bvg' ? 'walk' : 'estimate')) + ' · from ' + h(tr.origin) + '</p>'
+          '<p class="trav">' + (tr.source === 'bvg'
+            ? tr.minutes + ' min door to door · ' + h(tr.lines && tr.lines.length ? tr.lines.join(' → ') : 'walk') + ' · from ' + h(tr.origin) + '<br><span style="opacity:.75">BVG timetable, arriving ' + E.hm(new Date(tr.arriveAt)) + '</span>'
+            : '~' + tr.minutes + ' min from ' + h(tr.origin) + '<br><span style="opacity:.75">Rough estimate: the BVG timetable did not answer. Tap Refresh.</span>') + '</p>'
           : '<p class="trav" style="margin-top:14px">Add your home address in Settings to get leave times.</p>') +
         '<div class="acts"><a class="btn primary" href="' + h(mapsLink(nx.place)) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Directions</a>' +
         '<button class="tonal" id="refreshTravel">Refresh</button>' + (nx.occ ? '<button class="tonal" data-occ="' + h(nx.occ.id) + '">Details</button>' : '') + '</div></div>';
@@ -612,15 +617,17 @@ async function translate(text, to) {
   const hit = trCacheGet(key); if (hit) return hit;
   let out = null;
   // 1) Chrome's on-device translator, where the phone has it
+  // It can hang on some devices, so it gets a few seconds before the web service takes over.
+  const within = (pr, ms) => Promise.race([pr, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
   try {
-    if ('Translator' in self) {
-      const av = await self.Translator.availability({ sourceLanguage: 'de', targetLanguage: to });
+    if ('Translator' in self && translators[to] !== false) {
+      const av = await within(self.Translator.availability({ sourceLanguage: 'de', targetLanguage: to }), 1500);
       if (av === 'available') {
         translators[to] = translators[to] || self.Translator.create({ sourceLanguage: 'de', targetLanguage: to });
-        out = await (await translators[to]).translate(text);
+        out = await within((await within(translators[to], 2500)).translate(text), 3000);
       }
     }
-  } catch (e) { out = null; }
+  } catch (e) { out = null; translators[to] = false; }
   // 2) MyMemory free translation service
   if (!out) {
     try {
@@ -640,19 +647,28 @@ async function runLimited(tasks, limit) {
   const worker = async () => { while (i < tasks.length) { const t = tasks[i++]; try { await t(); } catch (e) {} } };
   await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
 }
-async function cycleDish(b) {
-  const order = ['en', 'tr', 'de'];
-  const next = (Number(b.dataset.l) + 1) % 3;
-  b.dataset.l = String(next);
-  const lang = order[next];
-  const name = b.querySelector('.dname'), tag = b.querySelector('.dlang');
-  if (lang === 'de') { name.textContent = b.dataset.de; tag.textContent = 'DE'; return; }
-  tag.textContent = '…';
-  const t = await translate(b.dataset.de, lang);
-  if (b.dataset.l !== String(next)) return; // tapped again meanwhile
-  if (t) { name.textContent = t; tag.textContent = lang.toUpperCase(); }
-  else { name.textContent = b.dataset.de; tag.textContent = 'DE'; toast('Translation is unavailable right now. Showing German.'); }
+// Press and hold a dish: German name with English and Turkish in a sheet.
+async function showDish(btn) {
+  const de = btn.dataset.de;
+  const row = (lang, label, id, text) => '<div class="trow"><span class="pill ex">' + lang + '</span><div style="min-width:0"><div class="muted mono">' + label + '</div><div class="tname" id="' + id + '">' + text + '</div></div></div>';
+  openSheet('<h3 style="margin-bottom:14px">Dish</h3><div class="stack" style="gap:14px">' +
+    row('DE', 'Deutsch', 'trDe', h(de)) + row('EN', 'English', 'trEn', '<span class="muted">Translating…</span>') + row('TR', 'Türkçe', 'trTr', '<span class="muted">Çevriliyor…</span>') +
+    '</div><p class="muted" style="margin-top:14px;font-size:13px">Machine translation. When a name looks odd, trust the German.</p><div class="row" style="margin-top:14px"><button class="tonal" id="trClose">Close</button></div>',
+    () => { $('#trClose').onclick = closeSheet; });
+  for (const [lang, id] of [['en', '#trEn'], ['tr', '#trTr']]) {
+    translate(de, lang).then(t => { const el = $(id); if (el) el.textContent = t || 'Not available right now'; });
+  }
 }
+let pressTimer = null, pressStart = null, pressFired = false;
+document.addEventListener('pointerdown', e => {
+  const d = e.target.closest('[data-dish]'); if (!d) return;
+  pressFired = false; pressStart = { x: e.clientX, y: e.clientY };
+  clearTimeout(pressTimer);
+  pressTimer = setTimeout(() => { pressFired = true; try { navigator.vibrate && navigator.vibrate(15); } catch (er) {} showDish(d); }, 450);
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach(t => document.addEventListener(t, () => clearTimeout(pressTimer), true));
+document.addEventListener('pointermove', e => { if (pressStart && Math.hypot(e.clientX - pressStart.x, e.clientY - pressStart.y) > 10) clearTimeout(pressTimer); });
+document.addEventListener('contextmenu', e => { if (e.target.closest('[data-dish]')) e.preventDefault(); });
 
 function campusSwitch() {
   return '<div class="seg" role="tablist" aria-label="Campus">' +
@@ -734,18 +750,12 @@ async function renderMensa() {
     const cats = {};
     meals.forEach(m => (cats[m.category || 'Other'] = cats[m.category || 'Other'] || []).push(m));
     let n = 0;
-    body.innerHTML = '<p class="muted" style="margin-bottom:10px">Tap a dish to see it in Turkish, tap again for German.</p><div class="stack">' + Object.keys(cats).map(cat => '<div class="card"><h2 style="margin:0 0 6px">' + h(catName(cat)) + '</h2>' + cats[cat].map(m => {
+    body.innerHTML = '<p class="muted" style="margin-bottom:10px">Press and hold a dish for English and Turkish.</p><div class="stack">' + Object.keys(cats).map(cat => '<div class="card"><h2 style="margin:0 0 6px">' + h(cat) + '</h2>' + cats[cat].map(m => {
       const p = m.prices && (m.prices.students != null ? m.prices.students : m.prices.employees);
       const veg = (m.notes || []).some(x => /vegan/i.test(x)) ? 'vegan' : (m.notes || []).some(x => /vegetar/i.test(x)) ? 'vegetarian' : '';
       const i = n++;
-      return '<button class="meal dish" data-dish="' + i + '" data-de="' + h(m.name) + '" data-l="0" aria-label="Change language"><div style="min-width:0"><span class="dname">' + h(m.name) + '</span> <span class="pill ex dlang">DE</span>' + (veg ? ' <span class="pill lec">' + veg + '</span>' : '') + '</div><div class="price">' + (p != null ? p.toFixed(2).replace('.', ',') + ' €' : '') + '</div></button>';
+      return '<button class="meal dish" data-dish="' + i + '" data-de="' + h(m.name) + '" aria-label="' + h(m.name) + '. Press and hold for English and Turkish"><div style="min-width:0"><span class="dname">' + h(m.name) + '</span>' + (veg ? ' <span class="pill lec">' + veg + '</span>' : '') + '</div><div class="price">' + (p != null ? p.toFixed(2).replace('.', ',') + ' €' : '') + '</div></button>';
     }).join('') + '</div>').join('') + '</div>';
-    // English first: translate every dish, update in place as results arrive
-    const dishes = [...body.querySelectorAll('.dish')];
-    await runLimited(dishes.map(b => async () => {
-      const en = await translate(b.dataset.de, 'en');
-      if (en && b.isConnected && b.dataset.l === '0') { b.querySelector('.dname').textContent = en; b.querySelector('.dlang').textContent = 'EN'; }
-    }), 3);
   } catch (e) {
     body.innerHTML = '<div class="empty">Could not load the menu (' + h(e.message) + '). Open the full menu on stw.berlin instead.</div>';
   }
@@ -876,7 +886,7 @@ async function exportIcs() {
 async function addrMinutes(place, startDate) {
   const a = S.addresses.find(x => x.id === S.defaultAddress);
   if (!a || a.lat == null || place.lat == null) return null;
-  const ck = place.lat.toFixed(4) + ',' + place.lng.toFixed(4) + '|' + a.lat.toFixed(4) + ',' + a.lng.toFixed(4);
+  const ck = place.lat.toFixed(4) + ',' + place.lng.toFixed(4) + '|' + a.lat.toFixed(4) + ',' + a.lng.toFixed(4) + '|' + startDate.getDay() + '-' + startDate.getHours();
   let cache = {}; try { cache = (await E.kvGet('addrTravel')) || {}; } catch (e) {}
   const hit = cache[ck];
   if (hit && Date.now() - hit.ts < 3 * 86400000) return Object.assign({ from: a.label }, hit);
@@ -1020,7 +1030,7 @@ document.addEventListener('click', e => {
     return;
   }
   const dy = e.target.closest('[data-day]'); if (dy) { selDay = dy.dataset.day; renderHeader(); renderToday(); return; }
-  const dish = e.target.closest('[data-dish]'); if (dish) { cycleDish(dish); return; }
+  const dish = e.target.closest('[data-dish]'); if (dish) { if (!pressFired && e.detail === 0) showDish(dish); pressFired = false; return; }
   const oc = e.target.closest('[data-occ]'); if (oc) { occSheet(oc.dataset.occ); return; }
   const ed = e.target.closest('[data-edit]'); if (ed) { editCourse(ed.dataset.edit); return; }
   const ex = e.target.closest('[data-exam]'); if (ex) { editExam(ex.dataset.exam); return; }

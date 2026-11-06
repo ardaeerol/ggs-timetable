@@ -162,33 +162,47 @@
 
   const BVG = 'https://v6.bvg.transport.rest';
 
+  // Same transport.rest API on two hosts; the second answers when the first is overloaded.
+  const TRANSIT_HOSTS = [BVG, 'https://v6.vbb.transport.rest'];
+  async function getJSON(path, timeoutMs) {
+    let lastErr = null;
+    for (const host of TRANSIT_HOSTS) {
+      const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const t = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs || 10000) : null;
+      try {
+        const r = await fetch(host + path, ctrl ? { signal: ctrl.signal } : {});
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return await r.json();
+      } catch (e) { lastErr = e; } finally { if (t) clearTimeout(t); }
+    }
+    throw lastErr || new Error('Transit API unreachable');
+  }
+
+  // The connection you should take: the latest departure that still arrives by `arriveBy`.
   async function bvgJourney(from, to, arriveBy) {
     const p = new URLSearchParams({
       'from.latitude': from.lat, 'from.longitude': from.lng, 'from.address': from.label || 'Start',
       'to.latitude': to.lat, 'to.longitude': to.lng, 'to.address': to.address || to.name || 'Destination',
-      arrival: arriveBy.toISOString(), results: '1', stopovers: 'false', remarks: 'false'
+      arrival: arriveBy.toISOString(), results: '4', stopovers: 'false', remarks: 'false'
     });
-    const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const t = ctrl ? setTimeout(() => ctrl.abort(), 12000) : null;
-    try {
-      const r = await fetch(BVG + '/journeys?' + p.toString(), ctrl ? { signal: ctrl.signal } : {});
-      if (!r.ok) throw new Error('BVG ' + r.status);
-      const j = await r.json();
-      const jr = j.journeys && j.journeys[0];
-      if (!jr || !jr.legs || !jr.legs.length) throw new Error('No connection found');
+    const j = await getJSON('/journeys?' + p.toString(), 12000);
+    const times = jr => {
       const first = jr.legs[0], last = jr.legs[jr.legs.length - 1];
-      const dep = new Date(first.departure || first.plannedDeparture);
-      const arr = new Date(last.arrival || last.plannedArrival);
-      const lines = jr.legs.filter(l => l.line).map(l => l.line.name);
-      return { leaveAt: dep.getTime(), arriveAt: arr.getTime(), minutes: Math.round((arr - dep) / 60000), lines, source: 'bvg' };
-    } finally { if (t) clearTimeout(t); }
+      return { dep: new Date(first.departure || first.plannedDeparture), arr: new Date(last.arrival || last.plannedArrival) };
+    };
+    const ok = (j.journeys || []).filter(jr => jr.legs && jr.legs.length && !jr.legs.some(l => l.cancelled));
+    if (!ok.length) throw new Error('No connection found');
+    const fits = ok.filter(jr => times(jr).arr <= arriveBy);
+    const pick = (fits.length ? fits : ok).reduce((best, jr) => (times(jr).dep > times(best).dep ? jr : best));
+    const { dep, arr } = times(pick);
+    const lines = pick.legs.filter(l => l.line).map(l => l.line.name);
+    const walk = Math.round(pick.legs.filter(l => l.walking).reduce((m, l) => m + (new Date(l.arrival || l.plannedArrival) - new Date(l.departure || l.plannedDeparture)), 0) / 60000);
+    return { leaveAt: dep.getTime(), arriveAt: arr.getTime(), minutes: Math.round((arr - dep) / 60000), walkMin: walk, lines, source: 'bvg' };
   }
 
   async function geocode(text) {
     const p = new URLSearchParams({ query: text, results: '5', addresses: 'true', poi: 'true', stops: 'true' });
-    const r = await fetch(BVG + '/locations?' + p.toString());
-    if (!r.ok) throw new Error('Search failed (' + r.status + ')');
-    const list = await r.json();
+    const list = await getJSON('/locations?' + p.toString(), 10000);
     return list.map(x => {
       const loc = x.location || x;
       return { name: x.name || x.address, lat: loc.latitude, lng: loc.longitude };
@@ -215,7 +229,7 @@
       const cached = travel[k];
       const minsToLeave = cached ? (cached.leaveAt - now) / 60000 : (it.start - now) / 60000;
       const age = cached ? (now - cached.ts) / 60000 : Infinity;
-      const maxAge = minsToLeave < 90 ? 8 : minsToLeave < 240 ? 30 : 120;
+      const maxAge = cached && cached.source === 'estimate' ? 5 : minsToLeave < 90 ? 8 : minsToLeave < 240 ? 30 : 120;
       if (cached && age < maxAge) continue;
       const arriveBy = new Date(it.start.getTime() - state.settings.bufferMin * 60000);
       try {
