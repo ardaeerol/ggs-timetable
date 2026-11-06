@@ -92,15 +92,17 @@
     if (!mains.length) return { pick: null, plate: [], total: 0, also: [], skipped };
     const pick = mains[0];
     const plate = [pick];
-    // Soup: one you liked, then the most protein, then the cheapest.
+    // Soup: one you liked, then protein for the price (a 5 € soup does not win on protein alone).
+    const soupValue = x => (x.protein.level + 1) / Math.max(x.price || 1, 0.75);
     const soup = all.filter(x => x.kind === 'soup' && allowed(x))
-      .sort((a, b) => (b.liked - a.liked) || (b.protein.level - a.protein.level) || ((a.price || 9) - (b.price || 9)))[0];
-    if (soup) plate.push(Object.assign(soup, { role: 'soup' }));
+      .sort((a, b) => (b.liked - a.liked) || (soupValue(b) - soupValue(a)) || ((a.price || 9) - (b.price || 9)))[0];
+    if (soup) plate.unshift(Object.assign(soup, { role: 'soup' }));
     // Dessert: one you liked, then quark/skyr/yoghurt when protein matters, then the traffic light, then price.
     const protDessert = x => (prefs.protein && /quark|skyr|joghurt|pudding.*protein|protein/i.test(x.m.name)) ? 1 : 0;
     const dessert = all.filter(x => x.kind === 'dessert' && allowed(x))
       .sort((a, b) => (b.liked - a.liked) || (protDessert(b) - protDessert(a)) || (b.health.level - a.health.level) || ((a.price || 9) - (b.price || 9)))[0];
     if (dessert) plate.push(Object.assign(dessert, { role: 'dessert' }));
+    pick.role = 'main';
     const total = plate.reduce((t, x) => t + (x.price || 0), 0);
     const also = mains.slice(1).filter(x => !prefs.protein || x.protein.level >= 2).slice(0, 2);
     return { pick, plate, total, also, skipped };

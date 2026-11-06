@@ -90,7 +90,20 @@ button:disabled{opacity:.6}
 /* next up */
 .next{background:var(--pri-c);color:var(--on-pri-c);border-radius:28px;padding:18px;box-shadow:none}
 .next.urgent{background:var(--accent);color:var(--on-accent)}
-.next[data-card-occ]{cursor:pointer}
+.next[data-card-occ],.next[data-card-exam]{cursor:pointer}
+.xcard{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;width:100%;text-align:left;background:var(--surface);color:var(--ink);border-radius:var(--r);padding:12px 14px;box-shadow:var(--shadow);min-height:0;font:inherit}
+.xcard.past{opacity:.55}
+.xdate{display:flex;flex-direction:column;align-items:center;justify-content:center;width:52px;height:56px;border-radius:14px;background:var(--bad-c);color:var(--bad)}
+.xcard.past .xdate{background:var(--surface-2);color:var(--muted)}
+.xdate b{font:800 22px/1 var(--f-display)}
+.xdate span{font:700 11.5px/1.2 var(--f-body);text-transform:uppercase;letter-spacing:.05em}
+.xbody{display:flex;flex-direction:column;gap:3px;min-width:0}
+.xbody b{font:700 15.5px/1.25 var(--f-body)}
+.xbody span{font:500 13px/1.3 var(--f-body);color:var(--muted)}
+.dlist{display:flex;flex-direction:column;margin-top:14px;border-top:1px solid var(--line)}
+.drow{display:grid;grid-template-columns:84px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.drow>span{color:var(--muted);font-weight:600;font-size:13px;padding-top:1px}
+#v-exams{padding-bottom:72px}
 .next .lbl{font:700 12.5px/1 var(--f-body);letter-spacing:.02em;opacity:.8}
 .next h3{margin-top:8px;font-size:22px}
 .next .sub{margin-top:4px;opacity:.85;font-weight:500}
@@ -158,7 +171,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);outline:none}
 .result{display:block;width:100%;text-align:left;font-weight:500;border-radius:14px}
 /* campus */
 .meal{display:flex;justify-content:space-between;gap:12px;padding:10px 0}
-.prole{display:inline-block;min-width:76px;font-size:12px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.04em}
+html,body{overflow-x:clip}
 body{touch-action:manipulation}
 button,.btn,nav.tabs,.sd,.ev,.wrow,.chip,.pill{-webkit-user-select:none;user-select:none}
 button,.btn,.wrow,.ev-card,.sd,.gap div,.next[data-card-occ]{transition:transform .09s ease,filter .09s ease}
@@ -176,9 +189,20 @@ body.kb{padding-bottom:16px}
 .fchip{min-height:34px;padding:7px 13px;font-size:13px;background:var(--surface-2);color:var(--muted)}
 .fchip[aria-pressed="true"]{background:var(--pri-c);color:var(--on-pri-c)}
 .pick .pill{background:color-mix(in srgb,currentColor 14%,transparent);color:inherit}
-.plate{margin-top:14px;border-top:1px solid color-mix(in srgb,currentColor 20%,transparent);padding-top:10px;display:flex;flex-direction:column;gap:6px}
-.prow{display:flex;justify-content:space-between;gap:12px;font-weight:500}
-.prow.tot{font-weight:800;font-size:17px;margin-top:4px}
+.pick-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.pick-sub{margin-top:6px;font-weight:500;font-size:13px;opacity:.8}
+.pick-total{font:800 30px/1 var(--f-display);letter-spacing:-.02em;white-space:nowrap}
+.plate{margin-top:14px;display:flex;flex-direction:column;border-top:1px solid color-mix(in srgb,currentColor 18%,transparent)}
+.prow{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;padding:11px 0;border-bottom:1px solid color-mix(in srgb,currentColor 12%,transparent)}
+.prow:last-child{border-bottom:0}
+.pname{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pname span:last-child{font-weight:600;line-height:1.3}
+.prow.main .pname span:last-child{font-size:16.5px;font-weight:700}
+.prow b{white-space:nowrap;font-weight:700}
+.prole{font-size:11.5px;font-weight:700;opacity:.65;text-transform:uppercase;letter-spacing:.06em}
+.also{margin-top:12px;padding-top:12px;border-top:1px solid color-mix(in srgb,currentColor 18%,transparent);display:flex;flex-direction:column;gap:6px}
+.arow{display:grid;grid-template-columns:1fr auto;gap:12px;font-weight:500;font-size:14px;opacity:.9}
+.arow b{white-space:nowrap}
 .dtags{display:inline-flex;gap:4px;flex-wrap:wrap;vertical-align:middle}
 .trow{display:flex;gap:12px;align-items:flex-start}
 .trow .pill{margin-top:2px}
@@ -238,9 +262,9 @@ nav.tabs a[aria-current="page"] .ic{background:var(--pri-c);color:var(--on-pri-c
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="engine.js?v=19"></script>
-<script src="native.js?v=19"></script>
-<script src="food.js?v=19"></script>
+<script src="engine.js?v=20"></script>
+<script src="native.js?v=20"></script>
+<script src="food.js?v=20"></script>
 <script>
 'use strict';
 const E = window.Engine;
@@ -448,7 +472,7 @@ function renderToday() {
       const sameDay = E.ymd(nx.start) === todayStr;
       const title = nx.occ ? shortTitle(nx.occ.course) : nx.title;
       const pct = leaveIn == null ? 0 : Math.max(0, Math.min(100, 100 - leaveIn / (60 * 60000) * 100));
-      html += '<h2>Next up</h2><div class="card next' + (urgent ? ' urgent' : '') + '"' + (nx.occ ? ' data-card-occ="' + h(nx.occ.id) + '" role="button" tabindex="0" aria-label="' + h(title) + ' details"' : '') + '>' +
+      html += '<h2>Next up</h2><div class="card next' + (urgent ? ' urgent' : '') + '"' + (nx.occ ? ' data-card-occ="' + h(nx.occ.id) + '" role="button" tabindex="0" aria-label="' + h(title) + ' details"' : ' data-card-exam="' + h(nx.id.replace('exam:', '')) + '" role="button" tabindex="0"') + '>' +
         '<div class="lbl">' + (sameDay ? 'Starts in ' + dur(nx.start - now) : h(fmtDate(nx.start)) + ' · in ' + dur(nx.start - now)) + (nx.occ ? ' · ' + h(nx.occ.course.type) : ' · Exam') + '</div>' +
         '<h3>' + h(title) + '</h3><p class="sub">' + E.hm(nx.start) + (nx.occ ? '–' + E.hm(nx.occ.end) : '') + ' · ' + h(nx.room) + ' · ' + h(nx.place.name) + '</p>' +
         (nx.pending ? '<p class="notice" style="margin-top:10px">Group not chosen yet. Timed for the earlier group.</p>' : '') +
@@ -495,7 +519,7 @@ function renderToday() {
   // exams soon
   const soon = S.exams.filter(x => x.date && x.date >= todayStr && E.parseYmd(x.date) - today < 21 * 86400000).sort((a, b) => a.date.localeCompare(b.date));
   if (soon.length) {
-    html += '<h2>Exams soon</h2><div class="stack">' + soon.map(x => '<div class="card row" style="justify-content:space-between;flex-wrap:nowrap"><div style="min-width:0"><strong>' + h(x.title) + '</strong><p class="muted mono">' + h(fmtDate(E.parseYmd(x.date))) + ' ' + h(x.time || '') + ' · ' + h(x.room || '') + '</p></div><span class="pill cx">in ' + h(dur(E.at(x.date, x.time || '09:00') - now)) + '</span></div>').join('') + '</div>';
+    html += '<h2>Exams soon</h2><div class="stack">' + soon.map(x => examCard(x)).join('') + '</div>';
   }
   $('#v-today').innerHTML = html;
   fillGapPicks();
@@ -620,19 +644,45 @@ async function findAddress(text, box, onPick) {
 }
 
 // ---------- EXAMS ----------
+function examStart(x) { return E.at(x.date, x.time || '09:00'); }
+function examEnd(x) { return new Date(examStart(x).getTime() + (Number(x.duration) || 120) * 60000); }
+function examCard(x, compact) {
+  const st = examStart(x), past = examEnd(x) < new Date();
+  return '<button class="xcard' + (past ? ' past' : '') + '" data-exam-open="' + h(x.id) + '">' +
+    '<span class="xdate"><b>' + st.getDate() + '</b><span>' + MONTHS[st.getMonth()].slice(0, 3) + '</span></span>' +
+    '<span class="xbody"><b>' + h(x.title) + '</b><span>' + SHORT[st.getDay()] + ' · ' + h(x.time || '') + '–' + E.hm(examEnd(x)) + (x.room ? ' · ' + h(x.room) : '') + '</span></span>' +
+    '<span class="pill ' + (past ? 'ex' : 'cx') + '">' + (past ? 'Done' : 'in ' + h(dur(st - Date.now()))) + '</span></button>';
+}
 function renderExams() {
-  const today = E.ymd(new Date());
+  const now = new Date();
   const list = S.exams.slice().sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-  let html = '<div class="row" style="justify-content:space-between"><h2 style="margin:6px 0">Exams &amp; deadlines</h2><button class="primary small" id="addExam">Add</button></div>';
-  if (!list.length) html += '<div class="empty" style="margin-top:10px">No exams yet. Add dates as they are announced on ISIS or MOSES; reminders follow the same travel rules as classes, plus one the evening before.</div>';
-  else html += '<div class="stack" style="margin-top:10px">' + list.map(x => {
-    const past = x.date < today; const p = E.placeOf(S, x);
-    return '<div class="card"' + (past ? ' style="opacity:.55"' : '') + '><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div style="min-width:0"><strong>' + h(x.title) + '</strong><p class="mono muted">' + h(fmtDate(E.parseYmd(x.date))) + ' ' + h(x.time || '') + ' · ' + h(x.room || 'room tba') + '</p></div>' +
-      '<span class="pill ' + (past ? 'ex' : 'cx') + '">' + (past ? 'Done' : 'in ' + h(dur(E.at(x.date, x.time || '09:00') - Date.now()))) + '</span></div>' + (x.notes ? '<p style="margin-top:6px">' + h(x.notes) + '</p>' : '') +
-      '<div class="row" style="margin-top:10px"><a class="btn small" target="_blank" rel="noopener" href="' + h(mapsLink(p)) + '">Route</a><button class="small" data-exam="' + h(x.id) + '">Edit</button></div></div>';
-  }).join('') + '</div>';
+  const up = list.filter(x => examEnd(x) >= now), past = list.filter(x => examEnd(x) < now);
+  let html = '';
+  if (!list.length) html += '<div class="empty" style="margin-top:6px">No exams yet. Tap + to add one when the date is announced on ISIS or MOSES. You get leave reminders like for classes, plus one the evening before.</div>';
+  if (up.length) html += '<div class="sec-head" style="margin-top:6px"><h2>Upcoming</h2><span class="mono muted">' + up.length + '</span></div><div class="stack">' + up.map(x => examCard(x)).join('') + '</div>';
+  if (past.length) html += '<h2>Past</h2><div class="stack">' + past.map(x => examCard(x)).join('') + '</div>';
+  html += '<button class="fab" id="addExam" aria-label="Add an exam"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>';
   $('#v-exams').innerHTML = html;
   $('#addExam').onclick = () => editExam(null);
+}
+function examSheet(id) {
+  const x = S.exams.find(e => e.id === id); if (!x) return;
+  const st = examStart(x), en = examEnd(x), now = Date.now(), p = E.placeOf(S, x);
+  const item = { id: 'exam:' + x.id, start: st, place: p, room: x.room };
+  const tr = st > now ? E.travelFor(S, T, LOC, now, item) : null;
+  const row = (k, v) => '<div class="drow"><span>' + k + '</span><div>' + v + '</div></div>';
+  openSheet('<div class="row" style="justify-content:space-between;flex-wrap:nowrap;align-items:flex-start"><h3>' + h(x.title) + '</h3><span class="pill ' + (en < now ? 'ex' : 'cx') + '">' + (en < now ? 'Done' : 'in ' + h(dur(st - now))) + '</span></div>' +
+    '<p class="muted" style="margin-top:4px">Exam</p>' +
+    '<div class="dlist">' +
+      row('Date', DAYS[st.getDay()] + ', ' + st.getDate() + ' ' + MONTHS[st.getMonth()] + ' ' + st.getFullYear()) +
+      row('Time', E.hm(st) + '–' + E.hm(en) + ' <span class="muted">(' + (Number(x.duration) || 120) + ' min)</span>') +
+      row('Room', '<b>' + h(x.room || 'Not set') + '</b>') +
+      row('Building', h(p.name) + '<br><span class="muted">' + h(p.address || '') + '</span>') +
+      (tr ? row('Leave', '<b>' + E.hm(new Date(tr.leaveAt)) + '</b> <span class="muted">· ' + (tr.source === 'bvg' ? tr.minutes + ' min' : '~' + tr.minutes + ' min, estimate') + ' from ' + h(tr.origin) + '</span>') : '') +
+      (x.notes ? row('Notes', h(x.notes)) : '') +
+    '</div>' +
+    '<div class="row" style="margin-top:16px"><a class="btn primary" target="_blank" rel="noopener" href="' + h(mapsLink(p)) + '"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Directions</a><button class="tonal" id="xsEdit">Edit</button><button class="ghost" id="xsClose">Close</button></div>',
+    () => { $('#xsEdit').onclick = () => editExam(x.id); $('#xsClose').onclick = closeSheet; });
 }
 
 function editExam(id) {
@@ -819,12 +869,12 @@ function eur(x) { return x.toFixed(2).replace('.', ',') + ' €'; }
 function pickCard(rec, prefs) {
   if (!rec || !rec.pick) return '<div class="empty">Nothing on today\'s menu fits your choices' + (rec && rec.skipped ? ' (' + rec.skipped + ' dishes left out for pork)' : '') + '.</div>';
   const pk = rec.pick;
-  return '<div class="card next pick"><div class="lbl">Today\'s pick</div><h3>' + h(pk.m.name) + '</h3>' +
-    '<div class="row" style="margin-top:10px;gap:6px">' + Food.reasons(pk, prefs).map(t => '<span class="pill">' + h(t) + '</span>').join('') + '</div>' +
-    (rec.plate.length > 1 ? '<div class="plate">' + rec.plate.map(x => '<div class="prow"><span><span class="prole">' + (x.role === 'soup' ? 'Soup' : x.role === 'dessert' ? 'Dessert' : 'Main') + '</span>' + h(x.m.name) + (x.liked ? ' ♥' : '') + '</span><b>' + (x.price != null ? eur(x.price) : '') + '</b></div>').join('') +
-      '<div class="prow tot"><span>Plate</span><b>' + eur(rec.total) + '</b></div></div>'
-      : '<div class="big" style="margin-top:12px;font-size:30px">' + (pk.price != null ? eur(pk.price) : '') + '</div>') +
-    (rec.also.length ? '<p class="trav" style="margin-top:12px">Also good: ' + rec.also.map(x => h(x.m.name) + (x.price != null ? ' (' + eur(x.price) + ')' : '')).join(' · ') + '</p>' : '') +
+  const label = { soup: 'Soup', main: 'Main', dessert: 'Dessert' };
+  return '<div class="card next pick">' +
+    '<div class="pick-head"><div><div class="lbl">Today\'s plate</div><div class="pick-sub">' + Food.reasons(pk, prefs).map(h).join(' · ') + '</div></div><div class="pick-total">' + eur(rec.total) + '</div></div>' +
+    '<div class="plate">' + rec.plate.map(x =>
+      '<div class="prow' + (x.role === 'main' ? ' main' : '') + '"><div class="pname"><span class="prole">' + label[x.role || 'main'] + (x.liked ? ' · ♥' : '') + '</span><span>' + h(x.m.name) + '</span></div><b>' + (x.price != null ? eur(x.price) : '') + '</b></div>').join('') + '</div>' +
+    (rec.also.length ? '<div class="also"><span class="prole">Other protein options</span>' + rec.also.map(x => '<div class="arow"><span>' + h(x.m.name) + '</span><b>' + (x.price != null ? eur(x.price) : '') + '</b></div>').join('') + '</div>' : '') +
     '</div>';
 }
 async function fillGapPicks() {
@@ -857,7 +907,7 @@ async function renderMensa() {
     meals.forEach(m => (cats[m.category || 'Other'] = cats[m.category || 'Other'] || []).push(m));
     let n = 0;
     body.innerHTML = pickCard(rec, prefs) +
-      '<p class="muted" style="margin:12px 0 10px;font-size:13px">The pick gives the most protein for the price, with a soup and a dessert. Desserts you like (press and hold, then ♥) come first. Protein is estimated from the dish name; the Mensa does not publish it. Pork is checked from the labels and the name, so read the counter label for sausages and mince. Press and hold a dish for English and Turkish.</p><div class="stack">' +
+      '<p class="muted" style="margin:12px 2px 10px;font-size:13px">Most protein for the price. Protein is estimated from the dish name; for sausages and mince, check the counter label for pork. Hold a dish for English, Turkish and ♥.</p><div class="stack">' +
       Object.keys(cats).map(cat => '<div class="card"><h2 style="margin:0 0 6px">' + h(cat) + '</h2>' + cats[cat].map(m => {
       const p = Food.priceOf(m), pork = Food.porkOf(m), pr = Food.proteinOf(m);
       const veg = (m.notes || []).some(x => /vegan/i.test(x)) ? 'vegan' : (m.notes || []).some(x => /vegetar/i.test(x)) ? 'vegetarian' : '';
@@ -1164,6 +1214,8 @@ document.addEventListener('click', e => {
   const fp = e.target.closest('[data-fpref]'); if (fp) { const k = fp.dataset.fpref; { const fp0 = foodPrefs(); delete fp0.liked; S.settings.foodPrefs = Object.assign(fp0, { [k]: !fp0[k] }); } save(); renderMensa(); return; }
   const dy = e.target.closest('[data-day]'); if (dy) { selDay = dy.dataset.day; renderHeader(); renderToday(); return; }
   const dish = e.target.closest('[data-dish]'); if (dish) { if (!pressFired && e.detail === 0) showDish(dish); pressFired = false; return; }
+  const xo = e.target.closest('[data-exam-open]'); if (xo) { examSheet(xo.dataset.examOpen); return; }
+  const cardEx = e.target.closest('[data-card-exam]'); if (cardEx && !e.target.closest('a,button')) { examSheet(cardEx.dataset.cardExam); return; }
   const cardOcc = e.target.closest('[data-card-occ]');
   if (cardOcc && !e.target.closest('a,button')) { occSheet(cardOcc.dataset.cardOcc); return; }
   const oc = e.target.closest('[data-occ]'); if (oc) { occSheet(oc.dataset.occ); return; }

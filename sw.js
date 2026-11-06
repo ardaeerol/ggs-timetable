@@ -1,8 +1,8 @@
 /* Service worker: offline cache, background reminder checks, notification buttons. */
-importScripts('./engine.js?v=19');
+importScripts('./engine.js?v=20');
 
-const CACHE = 'tu-timetable-v19';
-const SHELL = ['./', './index.html', './engine.js?v=19', './native.js?v=19', './food.js?v=19', './manifest.webmanifest', './app-192.png', './app-512.png', './badge-96.png'];
+const CACHE = 'tu-timetable-v20';
+const SHELL = ['./', './index.html', './engine.js?v=20', './native.js?v=20', './food.js?v=20', './manifest.webmanifest', './app-192.png', './app-512.png', './badge-96.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
