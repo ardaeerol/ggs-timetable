@@ -9,12 +9,13 @@
   const PORK_LIKELY = /bratwurst|currywurst|bockwurst|wiener|frikadelle|bulette|boulette|hackbraten|cevapcici|[cć]evap|gyros|jägerschnitzel|schnitzel wiener art|zigeuner|würstchen|wurst|hackfleisch|\bhack\b|gelatine/i;
   const NOT_PORK = /vegan|vegetar|veggie|rind|kalb|lamm|h[äa]hnchen|huhn|gefl[üu]gel|pute|puten|truthahn|soja|tofu|seitan|fisch|lachs/i;
 
+  // [pattern, label, animal]
   const HIGH = [
-    [/h[äa]hnchen|huhn|gefl[üu]gel|pute|puten|truthahn/i, 'poultry'],
-    [/rind|kalb|lamm|steak/i, 'beef or lamb'],
-    [/fisch|lachs|seelachs|kabeljau|dorsch|thunfisch|forelle|hering|makrele|alaska|garnele|scampi|pangasius|zander|hoki|tilapia|matjes/i, 'fish'],
-    [/tofu|seitan|tempeh|soja|lupine/i, 'tofu or soy'],
-    [/schwein|bratwurst|currywurst|frikadelle|hack|gyros|schnitzel|cevapcici/i, 'meat']
+    [/h[äa]hnchen|huhn|gefl[üu]gel|pute|puten|truthahn/i, 'poultry', true],
+    [/rind|kalb|lamm|steak/i, 'beef or lamb', true],
+    [/fisch|lachs|seelachs|kabeljau|dorsch|thunfisch|forelle|hering|makrele|alaska|garnele|scampi|pangasius|zander|hoki|tilapia|matjes/i, 'fish', true],
+    [/schwein|bratwurst|currywurst|frikadelle|hack|gyros|schnitzel|cevapcici/i, 'meat', true],
+    [/tofu|seitan|tempeh|soja|lupine/i, 'tofu or soy', false]
   ];
   const MEDIUM = [
     [/linsen|kichererbse|\bdal\b|falafel|bohnen|edamame|hummus|erbsen/i, 'legumes'],
@@ -40,9 +41,9 @@
   }
   function proteinOf(m) {
     const n = m.name || '';
-    for (const [re, why] of HIGH) if (re.test(n)) return { level: 3, label: 'High protein', why };
-    for (const [re, why] of MEDIUM) if (re.test(n)) return { level: 2, label: 'Some protein', why };
-    return { level: 0, label: 'Low protein', why: '' };
+    for (const [re, why, animal] of HIGH) if (re.test(n)) return { level: 3, label: 'High protein', why, animal };
+    for (const [re, why] of MEDIUM) if (re.test(n)) return { level: 2, label: 'Some protein', why, animal: why !== 'legumes' };
+    return { level: 0, label: 'Low protein', why: '', animal: false };
   }
   // Traffic light from the labels when present, otherwise a guess from the name.
   function healthOf(m) {
@@ -65,47 +66,43 @@
     return 'main';
   }
 
-  const DEFAULT_PREFS = { noPork: false, protein: true, healthy: true, cheap: true };
+  const DEFAULT_PREFS = { noPork: true, protein: true };
 
-  function score(m, prefs) {
-    const pr = proteinOf(m), he = healthOf(m), p = priceOf(m);
-    const cheap = p == null ? 0 : p <= 2 ? 2 : p <= 3 ? 1.2 : p <= 4 ? 0.4 : -0.8;
-    let s = 1;
-    if (prefs.protein) s += pr.level * 2.2;
-    if (prefs.healthy) s += he.level * 1.3;
-    if (prefs.cheap) s += cheap * 1.2;
-    return s;
+  // Value for money: protein points per euro. Animal protein counts a little extra; prices under 2 € count as 2 €
+  // so a small soup or side does not beat a full plate.
+  function score(x, prefs) {
+    const price = Math.max(x.price || 2, 2);
+    if (!prefs.protein) return -price;
+    const pts = x.protein.level + (x.protein.animal && x.protein.level >= 2 ? 1 : 0);
+    return pts / price;
   }
 
-  // Returns { pick, plate:[...], total, also:[...], skipped } or null when nothing fits.
+  // Returns { pick, plate:[...], total, also:[...], skipped }.
   function recommend(meals, prefs) {
     prefs = Object.assign({}, DEFAULT_PREFS, prefs || {});
     const all = meals.map(m => ({ m, kind: kindOf(m), pork: porkOf(m), protein: proteinOf(m), health: healthOf(m), price: priceOf(m) }));
     const allowed = x => !prefs.noPork || x.pork === 'no';
     const skipped = prefs.noPork ? all.filter(x => x.kind !== 'skip' && x.pork !== 'no').length : 0;
-    const mains = all.filter(x => x.kind === 'main' && allowed(x)).map(x => Object.assign(x, { score: score(x.m, prefs) })).sort((a, b) => b.score - a.score);
+    const mains = all.filter(x => x.kind === 'main' && allowed(x)).map(x => Object.assign(x, { score: score(x, prefs) }))
+      .sort((a, b) => (b.score - a.score) || ((a.price || 9) - (b.price || 9)));
     if (!mains.length) return { pick: null, plate: [], total: 0, also: [], skipped };
     const pick = mains[0];
     const plate = [pick];
-    // A vegetable side when the main has little veg; a protein dessert when protein is the goal and the main is light on it.
-    const sides = all.filter(x => x.kind === 'side' && allowed(x)).sort((a, b) => (b.health.level - a.health.level) || ((a.price || 9) - (b.price || 9)));
-    if (sides.length && !(VEG.test(pick.m.name) && pick.health.level >= 2)) {
-      const veg = sides.find(x => VEG.test(x.m.name) && x.health.level >= 2) || sides[0];
-      if (veg) plate.push(Object.assign(veg, { role: 'side' }));
-    }
+    // Light on protein: suggest a cheap quark or yoghurt on the side.
     if (prefs.protein && pick.protein.level < 3) {
-      const pd = all.filter(x => x.kind === 'dessert' && allowed(x) && /quark|skyr|joghurt/i.test(x.m.name)).sort((a, b) => (b.health.level - a.health.level) || ((a.price || 9) - (b.price || 9)))[0];
+      const pd = all.filter(x => x.kind === 'dessert' && allowed(x) && /quark|skyr|joghurt/i.test(x.m.name)).sort((a, b) => (a.price || 9) - (b.price || 9))[0];
       if (pd) plate.push(Object.assign(pd, { role: 'protein' }));
     }
     const total = plate.reduce((t, x) => t + (x.price || 0), 0);
-    return { pick, plate, total, also: mains.slice(1, 3), skipped };
+    const also = mains.slice(1).filter(x => !prefs.protein || x.protein.level >= 2).slice(0, 2);
+    return { pick, plate, total, also, skipped };
   }
 
   function reasons(x, prefs) {
     const r = [];
     if (x.protein.level) r.push(x.protein.label + (x.protein.why ? ' · ' + x.protein.why : ''));
-    else if (prefs && prefs.protein) r.push('Low protein');
-    if (x.health.label) r.push(x.health.label);
+    else r.push('Low protein');
+    if (prefs && prefs.protein && x.protein.level >= 2 && x.price != null && x.price <= 3) r.push('Good value');
     if (prefs && prefs.noPork) r.push('No pork');
     return r;
   }

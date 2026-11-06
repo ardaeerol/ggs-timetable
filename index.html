@@ -224,9 +224,9 @@ nav.tabs a[aria-current="page"] .ic{background:var(--pri-c);color:var(--on-pri-c
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="engine.js?v=16"></script>
-<script src="native.js?v=16"></script>
-<script src="food.js?v=16"></script>
+<script src="engine.js?v=17"></script>
+<script src="native.js?v=17"></script>
+<script src="food.js?v=17"></script>
 <script>
 'use strict';
 const E = window.Engine;
@@ -793,8 +793,8 @@ async function getMeals(ds) {
   mealCache[ds] = { meals, ts: Date.now() };
   return meals;
 }
-function foodPrefs() { return Object.assign({}, Food.DEFAULT_PREFS, S.settings.food || {}); }
-const PREF_LABELS = [['noPork', 'No pork'], ['protein', 'Protein'], ['healthy', 'Healthy'], ['cheap', 'Cheap']];
+function foodPrefs() { return Object.assign({}, Food.DEFAULT_PREFS, S.settings.foodPrefs || {}); }
+const PREF_LABELS = [['noPork', 'No pork'], ['protein', 'Protein for the price']];
 function eur(x) { return x.toFixed(2).replace('.', ',') + ' €'; }
 function pickCard(rec, prefs) {
   if (!rec || !rec.pick) return '<div class="empty">Nothing on today\'s menu fits your choices' + (rec && rec.skipped ? ' (' + rec.skipped + ' dishes left out for pork)' : '') + '.</div>';
@@ -837,7 +837,7 @@ async function renderMensa() {
     meals.forEach(m => (cats[m.category || 'Other'] = cats[m.category || 'Other'] || []).push(m));
     let n = 0;
     body.innerHTML = pickCard(rec, prefs) +
-      '<p class="muted" style="margin:12px 0 10px;font-size:13px">Protein is estimated from the dish name; the Mensa does not publish it. Pork is checked from the labels and the name, so read the counter label for sausages and mince. Press and hold a dish for English and Turkish.</p><div class="stack">' +
+      '<p class="muted" style="margin:12px 0 10px;font-size:13px">The pick gives the most protein for the price. Protein is estimated from the dish name; the Mensa does not publish it. Pork is checked from the labels and the name, so read the counter label for sausages and mince. Press and hold a dish for English and Turkish.</p><div class="stack">' +
       Object.keys(cats).map(cat => '<div class="card"><h2 style="margin:0 0 6px">' + h(cat) + '</h2>' + cats[cat].map(m => {
       const p = Food.priceOf(m), pork = Food.porkOf(m), pr = Food.proteinOf(m);
       const veg = (m.notes || []).some(x => /vegan/i.test(x)) ? 'vegan' : (m.notes || []).some(x => /vegetar/i.test(x)) ? 'vegetarian' : '';
@@ -1136,7 +1136,7 @@ document.addEventListener('click', e => {
     navigator.clipboard.writeText(t).then(() => toast('Address copied'), () => toast(t, 6000));
     return;
   }
-  const fp = e.target.closest('[data-fpref]'); if (fp) { const k = fp.dataset.fpref; S.settings.food = Object.assign(foodPrefs(), { [k]: !foodPrefs()[k] }); save(); renderMensa(); return; }
+  const fp = e.target.closest('[data-fpref]'); if (fp) { const k = fp.dataset.fpref; S.settings.foodPrefs = Object.assign(foodPrefs(), { [k]: !foodPrefs()[k] }); save(); renderMensa(); return; }
   const dy = e.target.closest('[data-day]'); if (dy) { selDay = dy.dataset.day; renderHeader(); renderToday(); return; }
   const dish = e.target.closest('[data-dish]'); if (dish) { if (!pressFired && e.detail === 0) showDish(dish); pressFired = false; return; }
   const cardOcc = e.target.closest('[data-card-occ]');
