@@ -135,7 +135,9 @@ button:disabled{opacity:.6}
 .wday-h span{color:var(--muted);font-weight:500}
 .wday-h.today{color:var(--pri)}
 .wrow{display:flex;gap:10px;align-items:center;width:100%;text-align:left;border-radius:16px;padding:10px 12px;min-height:0;font:inherit;color:hsl(var(--c) 40% var(--ev-ink-l));background:hsl(var(--c) var(--ev-s) var(--ev-l))}
-.wrow .t{font:700 13.5px/1.2 var(--f-body);width:44px;flex:none}
+.wrow .t{font:700 13.5px/1.25 var(--f-body);width:44px;flex:none}
+.wrow .t small{display:block;font-weight:500;font-size:12.5px;opacity:.72;margin-top:1px}
+#v-week{padding-bottom:72px}
 .wrow .n{min-width:0;flex:1}
 .wrow .n b{display:block;font:600 14px/1.25 var(--f-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wrow .n span{font:500 12.5px/1.3 var(--f-body);opacity:.8}
@@ -156,6 +158,14 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);outline:none}
 .result{display:block;width:100%;text-align:left;font-weight:500;border-radius:14px}
 /* campus */
 .meal{display:flex;justify-content:space-between;gap:12px;padding:10px 0}
+.fchips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.fchip{min-height:34px;padding:7px 13px;font-size:13px;background:var(--surface-2);color:var(--muted)}
+.fchip[aria-pressed="true"]{background:var(--pri-c);color:var(--on-pri-c)}
+.pick .pill{background:color-mix(in srgb,currentColor 14%,transparent);color:inherit}
+.plate{margin-top:14px;border-top:1px solid color-mix(in srgb,currentColor 20%,transparent);padding-top:10px;display:flex;flex-direction:column;gap:6px}
+.prow{display:flex;justify-content:space-between;gap:12px;font-weight:500}
+.prow.tot{font-weight:800;font-size:17px;margin-top:4px}
+.dtags{display:inline-flex;gap:4px;flex-wrap:wrap;vertical-align:middle}
 .trow{display:flex;gap:12px;align-items:flex-start}
 .trow .pill{margin-top:2px}
 .tname{font:600 16px/1.35 var(--f-body)}
@@ -214,8 +224,9 @@ nav.tabs a[aria-current="page"] .ic{background:var(--pri-c);color:var(--on-pri-c
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="engine.js?v=15"></script>
-<script src="native.js?v=15"></script>
+<script src="engine.js?v=16"></script>
+<script src="native.js?v=16"></script>
+<script src="food.js?v=16"></script>
 <script>
 'use strict';
 const E = window.Engine;
@@ -459,7 +470,7 @@ function renderToday() {
         const gs = o.end, ge = real[ri + 1].start;
         if (ge - gs >= 90 * 60000 && gs.getHours() < 15 && ge.getHours() >= 11) {
           const walk = E.estimateMinutes(E.placeOf(S, o.course), E.BUILDINGS.MENSA);
-          html += '<a class="gap" href="#mensa"><span></span><div><span>Free ' + E.hm(gs) + '–' + E.hm(ge) + '</span><b>Mensa · ' + walk + ' min ›</b></div></a>';
+          html += '<a class="gap" href="#mensa"><span></span><div style="flex-direction:column;gap:4px"><span class="row" style="justify-content:space-between"><span>Free ' + E.hm(gs) + '–' + E.hm(ge) + '</span><b>Mensa · ' + walk + ' min ›</b></span><span data-gpick="' + selDay + '" style="color:var(--ink);font-weight:600"></span></div></a>';
         }
       }
     });
@@ -473,6 +484,7 @@ function renderToday() {
     html += '<h2>Exams soon</h2><div class="stack">' + soon.map(x => '<div class="card row" style="justify-content:space-between;flex-wrap:nowrap"><div style="min-width:0"><strong>' + h(x.title) + '</strong><p class="muted mono">' + h(fmtDate(E.parseYmd(x.date))) + ' ' + h(x.time || '') + ' · ' + h(x.room || '') + '</p></div><span class="pill cx">in ' + h(dur(E.at(x.date, x.time || '09:00') - now)) + '</span></div>').join('') + '</div>';
   }
   $('#v-today').innerHTML = html;
+  fillGapPicks();
   const rb = $('#refreshTravel'); if (rb) rb.onclick = async () => { rb.disabled = true; rb.textContent = 'Checking BVG…'; T = {}; try { await E.kvSet('travel', {}); } catch (e) {} await runTick(true); };
 }
 
@@ -493,7 +505,7 @@ function renderWeek() {
     else if (!items.length) html += '<div class="wempty">No classes</div>';
     items.forEach(o => {
       const other = o.course.group && o.chosen && o.chosen !== o.course.group.option;
-      html += '<button class="wrow' + (other ? ' dim' : '') + (o.cancelled ? ' cancel dim' : '') + '" style="--c:' + hueOf(o.course) + '" data-occ="' + h(o.id) + '"><span class="t">' + E.hm(o.start) + '</span><span class="n"><b>' + h(shortTitle(o.course)) + '</b><span>' + h(o.course.type) + ' · ' + h(o.room) + (o.course.group ? ' · group ' + h(o.course.group.option) + (o.pending ? '?' : other ? '' : ' ✓') : '') + '</span></span>' +
+      html += '<button class="wrow' + (other ? ' dim' : '') + (o.cancelled ? ' cancel dim' : '') + '" style="--c:' + hueOf(o.course) + '" data-occ="' + h(o.id) + '"><span class="t">' + E.hm(o.start) + '<small>' + E.hm(o.end) + '</small></span><span class="n"><b>' + h(shortTitle(o.course)) + '</b><span>' + h(o.course.type) + ' · ' + h(o.room) + (o.course.group ? ' · group ' + h(o.course.group.option) + (o.pending ? '?' : other ? '' : ' ✓') : '') + '</span></span>' +
         (o.changed ? '<span class="pill chg">Changed</span>' : '') + (o.cancelled ? '<span class="pill cx">Off</span>' : '') + '</button>';
     });
     html += '</div>';
@@ -770,33 +782,69 @@ function renderLibraries() {
   $('#v-mensa').innerHTML = html;
   const lb = $('#libLocate'); if (lb) lb.onclick = () => askLibFix(true);
 }
+const mealCache = {};
+async function getMeals(ds) {
+  if (mealCache[ds] && Date.now() - mealCache[ds].ts < 30 * 60000) return mealCache[ds].meals;
+  const id = await mensaId();
+  const r = await fetch(OM + '/canteens/' + id + '/days/' + ds + '/meals');
+  if (r.status === 404) { mealCache[ds] = { meals: [], ts: Date.now() }; return []; }
+  if (!r.ok) throw new Error('OpenMensa ' + r.status);
+  const meals = await r.json();
+  mealCache[ds] = { meals, ts: Date.now() };
+  return meals;
+}
+function foodPrefs() { return Object.assign({}, Food.DEFAULT_PREFS, S.settings.food || {}); }
+const PREF_LABELS = [['noPork', 'No pork'], ['protein', 'Protein'], ['healthy', 'Healthy'], ['cheap', 'Cheap']];
+function eur(x) { return x.toFixed(2).replace('.', ',') + ' €'; }
+function pickCard(rec, prefs) {
+  if (!rec || !rec.pick) return '<div class="empty">Nothing on today\'s menu fits your choices' + (rec && rec.skipped ? ' (' + rec.skipped + ' dishes left out for pork)' : '') + '.</div>';
+  const pk = rec.pick;
+  return '<div class="card next pick"><div class="lbl">Today\'s pick</div><h3>' + h(pk.m.name) + '</h3>' +
+    '<div class="row" style="margin-top:10px;gap:6px">' + Food.reasons(pk, prefs).map(t => '<span class="pill">' + h(t) + '</span>').join('') + '</div>' +
+    (rec.plate.length > 1 ? '<div class="plate">' + rec.plate.map(x => '<div class="prow"><span>' + (x.role === 'side' ? '+ ' : x.role === 'protein' ? '+ ' : '') + h(x.m.name) + (x.role === 'protein' ? ' <span style="opacity:.75">for protein</span>' : x.role === 'side' ? ' <span style="opacity:.75">for veg</span>' : '') + '</span><b>' + (x.price != null ? eur(x.price) : '') + '</b></div>').join('') +
+      '<div class="prow tot"><span>Plate</span><b>' + eur(rec.total) + '</b></div></div>'
+      : '<div class="big" style="margin-top:12px;font-size:30px">' + (pk.price != null ? eur(pk.price) : '') + '</div>') +
+    (rec.also.length ? '<p class="trav" style="margin-top:12px">Also good: ' + rec.also.map(x => h(x.m.name) + (x.price != null ? ' (' + eur(x.price) + ')' : '')).join(' · ') + '</p>' : '') +
+    '</div>';
+}
+async function fillGapPicks() {
+  const el = document.querySelector('[data-gpick]'); if (!el) return;
+  try {
+    const rec = Food.recommend(await getMeals(el.dataset.gpick), foodPrefs());
+    if (rec.pick && el.isConnected) el.textContent = 'Pick: ' + rec.pick.m.name + (rec.pick.price != null ? ' · ' + eur(rec.pick.price) : '');
+  } catch (e) {}
+}
 async function renderMensa() {
   if (campusTab === 'libraries') { renderLibraries(); if (!libFixFresh()) askLibFix(false); return; }
   let d = E.addDays(new Date(), mensaDay);
   const ds = E.ymd(d);
   let html = campusSwitch() + '<div class="weeknav" style="margin-top:12px"><button class="small" id="mPrev" aria-label="Previous day">←</button><div style="text-align:center"><strong>' + DAYS[d.getDay()] + ' ' + d.getDate() + '.' + (d.getMonth() + 1) + '.</strong><div class="mono muted">Mensa TU Hardenbergstraße</div></div><button class="small" id="mNext" aria-label="Next day">→</button></div>' +
-    '<div id="mBody" style="margin-top:14px"><div class="empty">Loading the menu…</div></div>' +
+    '<div class="fchips" id="mPrefs" role="group" aria-label="Food preferences"></div>' +
+    '<div id="mBody" style="margin-top:12px"><div class="empty">Loading the menu…</div></div>' +
     '<div class="row" style="margin-top:14px"><a class="btn" target="_blank" rel="noopener" href="' + STW + '">Full menu on stw.berlin</a><a class="btn" target="_blank" rel="noopener" href="' + h(mapsLink(E.BUILDINGS.MENSA)) + '">Route to Mensa</a></div>' +
     '<p class="muted mono" style="margin-top:10px">Hardenbergstraße 34 · data via OpenMensa</p>';
   $('#v-mensa').innerHTML = html;
   $('#mPrev').onclick = () => { mensaDay--; renderMensa(); };
   $('#mNext').onclick = () => { mensaDay++; renderMensa(); };
   const body = $('#mBody');
+  const prefs = foodPrefs();
+  $('#mPrefs').innerHTML = PREF_LABELS.map(([k, l]) => '<button class="fchip" data-fpref="' + k + '" aria-pressed="' + !!prefs[k] + '">' + (prefs[k] ? '✓ ' : '') + l + '</button>').join('');
   try {
-    const id = await mensaId();
-    const r = await fetch(OM + '/canteens/' + id + '/days/' + ds + '/meals');
-    if (r.status === 404) { body.innerHTML = '<div class="empty">No menu for this day. The Mensa may be closed.</div>'; return; }
-    if (!r.ok) throw new Error('OpenMensa ' + r.status);
-    const meals = await r.json();
-    if (!meals.length) { body.innerHTML = '<div class="empty">No menu for this day.</div>'; return; }
+    const meals = await getMeals(ds);
+    if (!meals.length) { body.innerHTML = '<div class="empty">No menu for this day. The Mensa may be closed.</div>'; return; }
+    const rec = Food.recommend(meals, prefs);
     const cats = {};
     meals.forEach(m => (cats[m.category || 'Other'] = cats[m.category || 'Other'] || []).push(m));
     let n = 0;
-    body.innerHTML = '<p class="muted" style="margin-bottom:10px">Press and hold a dish for English and Turkish.</p><div class="stack">' + Object.keys(cats).map(cat => '<div class="card"><h2 style="margin:0 0 6px">' + h(cat) + '</h2>' + cats[cat].map(m => {
-      const p = m.prices && (m.prices.students != null ? m.prices.students : m.prices.employees);
+    body.innerHTML = pickCard(rec, prefs) +
+      '<p class="muted" style="margin:12px 0 10px;font-size:13px">Protein is estimated from the dish name; the Mensa does not publish it. Pork is checked from the labels and the name, so read the counter label for sausages and mince. Press and hold a dish for English and Turkish.</p><div class="stack">' +
+      Object.keys(cats).map(cat => '<div class="card"><h2 style="margin:0 0 6px">' + h(cat) + '</h2>' + cats[cat].map(m => {
+      const p = Food.priceOf(m), pork = Food.porkOf(m), pr = Food.proteinOf(m);
       const veg = (m.notes || []).some(x => /vegan/i.test(x)) ? 'vegan' : (m.notes || []).some(x => /vegetar/i.test(x)) ? 'vegetarian' : '';
+      const tags = (veg ? '<span class="pill lec">' + veg + '</span>' : '') + (pr.level === 3 ? '<span class="pill ex">protein</span>' : '') +
+        (prefs.noPork && pork === 'yes' ? '<span class="pill cx">pork</span>' : prefs.noPork && pork === 'maybe' ? '<span class="pill chg">pork?</span>' : '');
       const i = n++;
-      return '<button class="meal dish" data-dish="' + i + '" data-de="' + h(m.name) + '" aria-label="' + h(m.name) + '. Press and hold for English and Turkish"><div style="min-width:0"><span class="dname">' + h(m.name) + '</span>' + (veg ? ' <span class="pill lec">' + veg + '</span>' : '') + '</div><div class="price">' + (p != null ? p.toFixed(2).replace('.', ',') + ' €' : '') + '</div></button>';
+      return '<button class="meal dish" data-dish="' + i + '" data-de="' + h(m.name) + '" aria-label="' + h(m.name) + '. Press and hold for English and Turkish"><div style="min-width:0"><span class="dname">' + h(m.name) + '</span>' + (tags ? ' <span class="dtags">' + tags + '</span>' : '') + '</div><div class="price">' + (p != null ? eur(p) : '') + '</div></button>';
     }).join('') + '</div>').join('') + '</div>';
   } catch (e) {
     body.innerHTML = '<div class="empty">Could not load the menu (' + h(e.message) + '). Open the full menu on stw.berlin instead.</div>';
@@ -1088,6 +1136,7 @@ document.addEventListener('click', e => {
     navigator.clipboard.writeText(t).then(() => toast('Address copied'), () => toast(t, 6000));
     return;
   }
+  const fp = e.target.closest('[data-fpref]'); if (fp) { const k = fp.dataset.fpref; S.settings.food = Object.assign(foodPrefs(), { [k]: !foodPrefs()[k] }); save(); renderMensa(); return; }
   const dy = e.target.closest('[data-day]'); if (dy) { selDay = dy.dataset.day; renderHeader(); renderToday(); return; }
   const dish = e.target.closest('[data-dish]'); if (dish) { if (!pressFired && e.detail === 0) showDish(dish); pressFired = false; return; }
   const cardOcc = e.target.closest('[data-card-occ]');
