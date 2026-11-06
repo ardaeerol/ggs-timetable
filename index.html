@@ -107,6 +107,9 @@ input,select,textarea{font:15px/1.3 var(--f-body);color:var(--ink);background:va
 /* Mensa */
 .meal{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
 .meal:first-child{border-top:0}
+.seg{display:flex;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg a{flex:1;text-align:center;padding:9px 0;border-radius:7px;text-decoration:none;color:var(--muted);font:600 14px/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase}
+.seg a[aria-selected="true"]{background:var(--surface);color:var(--teal);box-shadow:0 1px 2px rgba(0,0,0,.12)}
 .dish{width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);border-radius:0;min-height:0;font:inherit;color:inherit;cursor:pointer;padding:9px 0}
 .card h2+.dish{border-top:0}
 .meal .price{font:500 13px/1.3 var(--f-mono);white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -145,7 +148,7 @@ nav.tabs a[aria-current="page"]{color:var(--teal)}
   <a href="#today" data-v="today"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>Today</a>
   <a href="#week" data-v="week"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Week</a>
   <a href="#exams" data-v="exams"><svg viewBox="0 0 24 24"><path d="M6 3.5h9l3 3V20.5H6z"/><path d="M9 11h6M9 15h6"/></svg>Exams</a>
-  <a href="#mensa" data-v="mensa"><svg viewBox="0 0 24 24"><path d="M7 3v8a2 2 0 0 0 2 2v8M5 3v5M9 3v5M17 3c-2 2-2 7 0 9v9"/></svg>Mensa</a>
+  <a href="#mensa" data-v="mensa"><svg viewBox="0 0 24 24"><path d="M7 3v8a2 2 0 0 0 2 2v8M5 3v5M9 3v5M17 3c-2 2-2 7 0 9v9"/></svg>Campus</a>
   <a href="#prefs" data-v="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>Settings</a>
 </nav>
 
@@ -162,7 +165,7 @@ const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
 const SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 let S = E.defaultState(), A = {}, T = {}, LOC = null;
-let view = 'today', weekOffset = 0, mensaDay = 0, swReg = null, idbOK = true;
+let view = 'today', campusTab = 'mensa', weekOffset = 0, mensaDay = 0, swReg = null, idbOK = true;
 
 // ---------- persistence ----------
 async function save() { try { await E.kvSet('state', S); } catch (e) { idbOK = false; } }
@@ -551,10 +554,37 @@ async function cycleDish(b) {
   else { name.textContent = b.dataset.de; tag.textContent = 'DE'; toast('Translation is unavailable right now. Showing German.'); }
 }
 
+function campusSwitch() {
+  return '<div class="seg" role="tablist" aria-label="Campus">' +
+    '<a role="tab" href="#mensa"' + (campusTab === 'mensa' ? ' aria-selected="true"' : '') + '>Mensa</a>' +
+    '<a role="tab" href="#libraries"' + (campusTab === 'libraries' ? ' aria-selected="true"' : '') + '>Libraries</a></div>';
+}
+function renderLibraries() {
+  const now = Date.now();
+  const live = S.settings.useLocation && LOC && now - LOC.ts < 20 * 60000 ? LOC : null;
+  const list = E.LIBRARIES.map(l => {
+    const p = E.BUILDINGS[l.building];
+    return Object.assign({}, l, { place: p, mins: live ? E.estimateMinutes(live, p) : null });
+  });
+  if (live) list.sort((a, b) => a.mins - b.mins);
+  let html = campusSwitch() +
+    '<p class="muted" style="margin:12px 0">' + (live ? 'Sorted by distance from you. Times are rough estimates.' : 'Turn on live location in Settings to sort these by distance.') + ' <strong>Go</strong> starts the route from where you are now.</p>' +
+    '<div class="stack">' + list.map(l => '<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:nowrap;align-items:flex-start"><div style="min-width:0">' +
+      '<strong>' + h(l.name) + '</strong>' + (l.main ? ' <span class="pill lec">Main</span>' : '') +
+      '<p class="muted" style="margin-top:2px">' + h(l.de) + '</p>' +
+      '<p class="mono" style="margin-top:6px"><strong>' + h(l.room) + '</strong> · ' + h(l.place.address) + '</p></div>' +
+      (l.mins != null ? '<span class="pill ex">~' + l.mins + ' min</span>' : '') + '</div>' +
+      '<div class="row" style="margin-top:10px"><a class="btn primary" target="_blank" rel="noopener" href="' + h(E.mapsUrl(l.place)) + '">Go</a>' +
+      '<button class="small ghost" data-copy="' + h(l.place.address) + '">Copy address</button></div></div>').join('') + '</div>' +
+    '<div class="row" style="margin-top:14px"><a class="btn" target="_blank" rel="noopener" href="https://www.ub.tu-berlin.de/">Opening hours &amp; catalogue</a></div>' +
+    '<p class="muted mono" style="margin-top:10px">Source: TU Berlin · UdK Berlin university libraries card</p>';
+  $('#v-mensa').innerHTML = html;
+}
 async function renderMensa() {
+  if (campusTab === 'libraries') { renderLibraries(); return; }
   let d = E.addDays(new Date(), mensaDay);
   const ds = E.ymd(d);
-  let html = '<div class="weeknav"><button class="small" id="mPrev" aria-label="Previous day">←</button><div style="text-align:center"><strong>' + DAYS[d.getDay()] + ' ' + d.getDate() + '.' + (d.getMonth() + 1) + '.</strong><div class="mono muted">Mensa TU Hardenbergstraße</div></div><button class="small" id="mNext" aria-label="Next day">→</button></div>' +
+  let html = campusSwitch() + '<div class="weeknav" style="margin-top:12px"><button class="small" id="mPrev" aria-label="Previous day">←</button><div style="text-align:center"><strong>' + DAYS[d.getDay()] + ' ' + d.getDate() + '.' + (d.getMonth() + 1) + '.</strong><div class="mono muted">Mensa TU Hardenbergstraße</div></div><button class="small" id="mNext" aria-label="Next day">→</button></div>' +
     '<div id="mBody" style="margin-top:14px"><div class="empty">Loading the menu…</div></div>' +
     '<div class="row" style="margin-top:14px"><a class="btn" target="_blank" rel="noopener" href="' + STW + '">Full menu on stw.berlin</a><a class="btn" target="_blank" rel="noopener" href="' + h(mapsLink(E.BUILDINGS.MENSA)) + '">Route to Mensa</a></div>' +
     '<p class="muted mono" style="margin-top:10px">Hardenbergstraße 34 · data via OpenMensa</p>';
@@ -721,13 +751,19 @@ function render() {
 }
 function route() {
   const hsh = location.hash.replace('#', '');
-  view = ({ today: 'today', week: 'week', exams: 'exams', mensa: 'mensa', prefs: 'settings' })[hsh] || 'today';
+  view = ({ today: 'today', week: 'week', exams: 'exams', mensa: 'mensa', libraries: 'mensa', prefs: 'settings' })[hsh] || 'today';
+  if (hsh === 'libraries') campusTab = 'libraries'; else if (hsh === 'mensa') campusTab = 'mensa';
   ['today', 'week', 'exams', 'mensa', 'settings'].forEach(v => { $('#v-' + v).hidden = v !== view; });
   document.querySelectorAll('nav.tabs a').forEach(a => { if (a.dataset.v === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   closeSheet(); render(); window.scrollTo(0, 0);
 }
 document.addEventListener('click', e => {
   const ans = e.target.closest('[data-ans]'); if (ans) { const [s, d, o] = ans.dataset.ans.split('|'); answer(s, d, o || null); closeSheet(); toast(o ? 'Group ' + o + ' for ' + fmtDate(E.parseYmd(d)) : 'You will be asked again'); return; }
+  const cp = e.target.closest('[data-copy]'); if (cp) {
+    const t = cp.dataset.copy;
+    navigator.clipboard.writeText(t).then(() => toast('Address copied'), () => toast(t, 6000));
+    return;
+  }
   const dish = e.target.closest('[data-dish]'); if (dish) { cycleDish(dish); return; }
   const oc = e.target.closest('[data-occ]'); if (oc) { occSheet(oc.dataset.occ); return; }
   const ed = e.target.closest('[data-edit]'); if (ed) { editCourse(ed.dataset.edit); return; }

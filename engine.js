@@ -25,8 +25,23 @@
     HFT: { name: 'Hochfrequenztechnik building (HFT)', address: 'Einsteinufer 25, 10587 Berlin', maps: 'TU Berlin Hochfrequenztechnik HFT, Einsteinufer 25, 10587 Berlin', lat: 52.5174, lng: 13.3228 },
     MA:  { name: 'Mathematics building (MA)', address: 'Straße des 17. Juni 136, 10623 Berlin', maps: 'TU Berlin Mathematikgebäude, Straße des 17. Juni 136, 10623 Berlin', lat: 52.5133, lng: 13.3262 },
     H:   { name: 'Main building (H)', address: 'Straße des 17. Juni 135, 10623 Berlin', maps: 'TU Berlin Hauptgebäude, Straße des 17. Juni 135, 10623 Berlin', lat: 52.5125, lng: 13.3269 },
+    VWH: { name: 'Volkswagen-Haus (University Library)', address: 'Fasanenstraße 88, 10623 Berlin', maps: 'Universitätsbibliothek TU Berlin, Fasanenstraße 88, 10623 Berlin', lat: 52.5107, lng: 13.3303 },
+    EW:  { name: 'Eugene-Paul-Wigner building (EW)', address: 'Hardenbergstraße 36, 10623 Berlin', maps: 'TU Berlin Eugene-Paul-Wigner-Gebäude EW, Hardenbergstraße 36, 10623 Berlin', lat: 52.5114, lng: 13.3257 },
+    TEL: { name: 'Telefunken high-rise (TEL)', address: 'Ernst-Reuter-Platz 7, 10587 Berlin', maps: 'TU Berlin Telefunken-Hochhaus, Ernst-Reuter-Platz 7, 10587 Berlin', lat: 52.5136, lng: 13.3196 },
+    HBS: { name: 'Hardenbergstraße 16-18 (HBS)', address: 'Hardenbergstraße 16-18, 10623 Berlin', maps: 'TU Berlin ZEMS, Hardenbergstraße 16-18, 10623 Berlin', lat: 52.5077, lng: 13.3292 },
     MENSA: { name: 'Mensa TU Hardenbergstraße', address: 'Hardenbergstraße 34, 10623 Berlin', maps: 'Mensa TU Hardenbergstraße, Hardenbergstraße 34, 10623 Berlin', lat: 52.5097, lng: 13.3262 }
   };
+
+  // From the TU Berlin / UdK university libraries card.
+  const LIBRARIES = [
+    { id: 'ub',   name: 'University Library (main)', de: 'Universitätsbibliotheken TU · UdK im Volkswagen-Haus', room: 'Volkswagen-Haus', building: 'VWH', main: true },
+    { id: 'arch', name: 'Architecture & Art History Library', de: 'Bereichsbibliothek Architektur und Kunstwissenschaft', room: 'Building A-F', building: 'A' },
+    { id: 'phys', name: 'Physics Library', de: 'Bereichsbibliothek Physik', room: 'EW 223', building: 'EW' },
+    { id: 'econ', name: 'Economics & Management Library', de: 'Die Bibliothek Wirtschaft & Management', room: 'H 5150b', building: 'H' },
+    { id: 'math', name: 'Mathematics Library', de: 'Mathematische Fachbibliothek', room: 'MA 162-169', building: 'MA' },
+    { id: 'zfa',  name: 'Center for Research on Antisemitism Library', de: 'Bibliothek des Zentrums für Antisemitismusforschung', room: 'TEL 909', building: 'TEL' },
+    { id: 'zems', name: 'Modern Languages Centre (ZEMS)', de: 'Zentraleinrichtung Moderne Sprachen', room: 'Building HBS 3', building: 'HBS' }
+  ];
 
   const GROUP_SETS = {
     geodb:  { name: 'Geodatabases exercise' },
@@ -422,7 +437,7 @@
   }
 
   root.Engine = {
-    TERM, BUILDINGS, GROUP_SETS, SEED_COURSES, defaultState, migrate,
+    TERM, BUILDINGS, LIBRARIES, GROUP_SETS, SEED_COURSES, defaultState, migrate,
     ymd, parseYmd, at, addDays, mondayOf, inBreak, hm, pad,
     occurrences, placeOf, upcomingTargets, travelFor, refreshTravel, currentOrigin, estimateMinutes, bvgJourney, geocode,
     alertsDue, tick, kvGet, kvSet, loadAll, setAnswer, markFired, buildICS, mapsUrl, groupChoiceFor
