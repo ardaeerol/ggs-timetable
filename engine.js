@@ -439,7 +439,7 @@
   root.Engine = {
     TERM, BUILDINGS, LIBRARIES, GROUP_SETS, SEED_COURSES, defaultState, migrate,
     ymd, parseYmd, at, addDays, mondayOf, inBreak, hm, pad,
-    occurrences, placeOf, upcomingTargets, travelFor, refreshTravel, currentOrigin, estimateMinutes, bvgJourney, geocode,
+    occurrences, placeOf, upcomingTargets, travelFor, refreshTravel, currentOrigin, estimateMinutes, haversineKm, bvgJourney, geocode,
     alertsDue, tick, kvGet, kvSet, loadAll, setAnswer, markFired, buildICS, mapsUrl, groupChoiceFor
   };
 })(typeof self !== 'undefined' ? self : globalThis);

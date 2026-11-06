@@ -107,6 +107,7 @@ input,select,textarea{font:15px/1.3 var(--f-body);color:var(--ink);background:va
 /* Mensa */
 .meal{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
 .meal:first-child{border-top:0}
+.dist{font:700 20px/1 var(--f-display);font-variant-numeric:tabular-nums;color:var(--teal)}
 .seg{display:flex;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
 .seg a{flex:1;text-align:center;padding:9px 0;border-radius:7px;text-decoration:none;color:var(--muted);font:600 14px/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase}
 .seg a[aria-selected="true"]{background:var(--surface);color:var(--teal);box-shadow:0 1px 2px rgba(0,0,0,.12)}
@@ -155,7 +156,7 @@ nav.tabs a[aria-current="page"]{color:var(--teal)}
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="engine.js?v=8"></script>
+<script src="engine.js?v=9"></script>
 <script>
 'use strict';
 const E = window.Engine;
@@ -559,29 +560,61 @@ function campusSwitch() {
     '<a role="tab" href="#mensa"' + (campusTab === 'mensa' ? ' aria-selected="true"' : '') + '>Mensa</a>' +
     '<a role="tab" href="#libraries"' + (campusTab === 'libraries' ? ' aria-selected="true"' : '') + '>Libraries</a></div>';
 }
-function renderLibraries() {
+let libFix = null, libAsking = false;
+function fmtDist(km) { return km < 1 ? (Math.round(km * 1000 / 10) * 10) + ' m' : km.toFixed(1).replace('.', ',') + ' km'; }
+// Street walking ≈ 1.25 × straight line at 4.8 km/h.
+function walkMin(km) { return Math.max(1, Math.round(km * 1.25 / 4.8 * 60)); }
+function libFixFresh() {
   const now = Date.now();
-  const live = S.settings.useLocation && LOC && now - LOC.ts < 20 * 60000 ? LOC : null;
+  if (libFix && now - libFix.ts < 5 * 60000) return libFix;
+  if (S.settings.useLocation && LOC && now - LOC.ts < 5 * 60000) return LOC;
+  return null;
+}
+// Ask for one fresh position when the list opens, so distances reflect where you are right now.
+function askLibFix(fromButton) {
+  if (libAsking || !('geolocation' in navigator)) return;
+  if (!fromButton && !S.settings.useLocation) return;
+  libAsking = true; renderLibraries();
+  navigator.geolocation.getCurrentPosition(p => {
+    libAsking = false;
+    libFix = { lat: p.coords.latitude, lng: p.coords.longitude, ts: Date.now(), acc: p.coords.accuracy };
+    if (S.settings.useLocation) { LOC = libFix; E.kvSet('loc', LOC).catch(() => {}); renderHeader(); }
+    if (view === 'mensa' && campusTab === 'libraries') renderLibraries();
+  }, err => {
+    libAsking = false;
+    if (view === 'mensa' && campusTab === 'libraries') renderLibraries();
+    toast(err.code === 1 ? 'Location is blocked. Allow it for this site in Chrome, and for Chrome in Android settings.' : 'Could not get your location. Try again outside or with Wi-Fi on.', 5500);
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
+}
+function renderLibraries() {
+  const fix = libFixFresh();
   const list = E.LIBRARIES.map(l => {
     const p = E.BUILDINGS[l.building];
-    return Object.assign({}, l, { place: p, mins: live ? E.estimateMinutes(live, p) : null });
+    const km = fix ? E.haversineKm(fix, p) : null;
+    return Object.assign({}, l, { place: p, km });
   });
-  if (live) list.sort((a, b) => a.mins - b.mins);
+  if (fix) list.sort((x, y) => x.km - y.km);
+  let status;
+  if (libAsking) status = '<span class="chip live"><span class="dot"></span>Finding your location…</span>';
+  else if (fix) status = '<span class="chip live"><span class="dot"></span>From your location · ' + (Date.now() - fix.ts < 60000 ? 'just now' : dur(Date.now() - fix.ts) + ' ago') + (fix.acc ? ' · ±' + Math.round(fix.acc) + ' m' : '') + '</span><button class="small ghost" id="libLocate">Update</button>';
+  else status = '<button class="primary small" id="libLocate">Show distances from me</button><span class="muted">' + (S.settings.useLocation ? '' : 'Live location is off in Settings.') + '</span>';
   let html = campusSwitch() +
-    '<p class="muted" style="margin:12px 0">' + (live ? 'Sorted by distance from you. Times are rough estimates.' : 'Turn on live location in Settings to sort these by distance.') + ' <strong>Go</strong> starts the route from where you are now.</p>' +
-    '<div class="stack">' + list.map(l => '<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:nowrap;align-items:flex-start"><div style="min-width:0">' +
-      '<strong>' + h(l.name) + '</strong>' + (l.main ? ' <span class="pill lec">Main</span>' : '') +
+    '<div class="row" style="margin:12px 0">' + status + '</div>' +
+    '<div class="stack">' + list.map((l, i) => '<div class="card"><div class="row" style="justify-content:space-between;flex-wrap:nowrap;align-items:flex-start"><div style="min-width:0">' +
+      '<strong>' + h(l.name) + '</strong>' + (l.main ? ' <span class="pill lec">Main</span>' : '') + (fix && i === 0 ? ' <span class="pill chg">Nearest</span>' : '') +
       '<p class="muted" style="margin-top:2px">' + h(l.de) + '</p>' +
       '<p class="mono" style="margin-top:6px"><strong>' + h(l.room) + '</strong> · ' + h(l.place.address) + '</p></div>' +
-      (l.mins != null ? '<span class="pill ex">~' + l.mins + ' min</span>' : '') + '</div>' +
+      (l.km != null ? '<div style="text-align:right;flex:none"><div class="dist">' + fmtDist(l.km) + '</div><div class="mono muted">' + walkMin(l.km) + ' min walk</div>' + (l.km > 2 ? '<div class="mono muted">~' + E.estimateMinutes(fix, l.place) + ' min transit</div>' : '') + '</div>' : '') + '</div>' +
       '<div class="row" style="margin-top:10px"><a class="btn primary" target="_blank" rel="noopener" href="' + h(E.mapsUrl(l.place)) + '">Go</a>' +
       '<button class="small ghost" data-copy="' + h(l.place.address) + '">Copy address</button></div></div>').join('') + '</div>' +
-    '<div class="row" style="margin-top:14px"><a class="btn" target="_blank" rel="noopener" href="https://www.ub.tu-berlin.de/">Opening hours &amp; catalogue</a></div>' +
+    '<p class="muted" style="margin-top:12px">Distances are straight-line; walking times assume normal streets. <strong>Go</strong> opens Google Maps from where you are.</p>' +
+    '<div class="row" style="margin-top:12px"><a class="btn" target="_blank" rel="noopener" href="https://www.ub.tu-berlin.de/">Opening hours &amp; catalogue</a></div>' +
     '<p class="muted mono" style="margin-top:10px">Source: TU Berlin · UdK Berlin university libraries card</p>';
   $('#v-mensa').innerHTML = html;
+  const lb = $('#libLocate'); if (lb) lb.onclick = () => askLibFix(true);
 }
 async function renderMensa() {
-  if (campusTab === 'libraries') { renderLibraries(); return; }
+  if (campusTab === 'libraries') { renderLibraries(); if (!libFixFresh()) askLibFix(false); return; }
   let d = E.addDays(new Date(), mensaDay);
   const ds = E.ymd(d);
   let html = campusSwitch() + '<div class="weeknav" style="margin-top:12px"><button class="small" id="mPrev" aria-label="Previous day">←</button><div style="text-align:center"><strong>' + DAYS[d.getDay()] + ' ' + d.getDate() + '.' + (d.getMonth() + 1) + '.</strong><div class="mono muted">Mensa TU Hardenbergstraße</div></div><button class="small" id="mNext" aria-label="Next day">→</button></div>' +
@@ -734,6 +767,7 @@ function startLocation() {
     E.kvSet('loc', LOC).catch(() => {});
     const moved = !prev || Math.abs(prev.lat - LOC.lat) + Math.abs(prev.lng - LOC.lng) > 0.004;
     renderHeader(); if (moved) runTick();
+    if (view === 'mensa' && campusTab === 'libraries' && !libAsking) renderLibraries();
   }, () => { renderHeader(); }, { enableHighAccuracy: false, maximumAge: 120000, timeout: 20000 });
 }
 let ticking = false;
