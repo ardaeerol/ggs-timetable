@@ -399,16 +399,25 @@
     };
     let skipped = 0;
     const occ = occurrences(state, answers, fromDate || parseYmd(TERM.lectureStart), parseYmd(TERM.lectureEnd));
+    const pendSeen = {};
     for (const o of occ) {
       if (o.cancelled) continue;
-      if (o.pending) { skipped++; continue; }
+      let label = o.course.title + ' · ' + o.course.type, groupNote = o.course.group ? '\nGroup ' + o.course.group.option : '';
+      if (o.pending) {
+        // Group not chosen: one event at the earliest group, so the alarms come early rather than never.
+        const k = o.course.group.set + '|' + o.date;
+        if (pendSeen[k]) continue;
+        pendSeen[k] = true; skipped++;
+        const opts = occ.filter(x => x.pending && x.date === o.date && x.course.group && x.course.group.set === o.course.group.set);
+        label += ' (group?)';
+        groupNote = '\nGroup not chosen. Options: ' + opts.map(x => x.course.group.option + ' ' + hm(x.start) + '-' + hm(x.end) + ' ' + x.room).join(', ');
+      }
       const p = placeOf(state, o.course);
       const tm = (travelMin[o.course.building === 'OTHER' ? 'OTHER:' + o.course.id : o.course.building] || 30) + s.bufferMin;
-      const label = o.course.title + ' · ' + o.course.type;
       lines.push('BEGIN:VEVENT', 'UID:' + o.id.replace('|', '-') + '@tu-timetable', 'DTSTAMP:' + stamp,
         'DTSTART;TZID=Europe/Berlin:' + icsLocal(o.start), 'DTEND;TZID=Europe/Berlin:' + icsLocal(o.end),
         'SUMMARY:' + icsEsc(label), 'LOCATION:' + icsEsc(o.room + ', ' + p.address),
-        'DESCRIPTION:' + icsEsc((o.course.lecturer || '') + (o.course.group ? '\nGroup ' + o.course.group.option : '') + '\nTravel from default address ≈ ' + (tm - s.bufferMin) + ' min'),
+        'DESCRIPTION:' + icsEsc((o.course.lecturer || '') + groupNote + '\nTravel from default address ≈ ' + (tm - s.bufferMin) + ' min'),
         ...alarms(tm, label), 'END:VEVENT');
     }
     for (const ex of state.exams) {

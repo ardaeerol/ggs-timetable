@@ -107,6 +107,7 @@ input,select,textarea{font:15px/1.3 var(--f-body);color:var(--ink);background:va
 /* Mensa */
 .meal{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
 .meal:first-child{border-top:0}
+.bgstat{border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--bg)}
 .dist{font:700 20px/1 var(--f-display);font-variant-numeric:tabular-nums;color:var(--teal)}
 .seg{display:flex;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
 .seg a{flex:1;text-align:center;padding:9px 0;border-radius:7px;text-decoration:none;color:var(--muted);font:600 14px/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase}
@@ -156,7 +157,7 @@ nav.tabs a[aria-current="page"]{color:var(--teal)}
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="engine.js?v=9"></script>
+<script src="engine.js?v=10"></script>
 <script>
 'use strict';
 const E = window.Engine;
@@ -672,13 +673,13 @@ function renderSettings() {
     '<p class="muted">You get three alerts per class: two before the time you must leave, then a "Leave now" alert at that time.</p>' +
     '<div class="grid2"><label>First alert (min before leaving)<input type="number" id="sL1" min="5" max="240" value="' + st.leadFirst + '"></label><label>Second alert (min before leaving)<input type="number" id="sL2" min="5" max="180" value="' + st.leadSecond + '"></label></div>' +
     '<div class="grid2"><label>Stop to room (min)<input type="number" id="sBuf" min="0" max="30" value="' + st.bufferMin + '"></label><label>Ask for groups at<input type="time" id="sAsk" value="' + h(st.groupAskTime) + '"></label></div>' +
-    (!standalone ? '<p class="notice">Install the app (browser menu → Add to Home screen) so Android can check reminders in the background.</p>' : '') +
-    '<p class="muted">For alerts that never miss, also export your timetable to Samsung Calendar below. Those alarms use the travel time from your default address.</p></div>' +
+    '<div class="bgstat" id="bgStat"><p class="mono muted">Checking background reminders…</p></div>' +
+    '<p class="muted">Android decides when a web app may run in the background, often only a few times a day. For alarms that always ring on time, export your timetable to Samsung Calendar below.</p></div>' +
 
     '<h2>Default groups</h2><div class="card set"><p class="muted">Used when you don\'t answer the evening question. You can still change any day.</p>' +
     Object.keys(E.GROUP_SETS).map(k => '<label>' + h(E.GROUP_SETS[k].name) + '<select data-gdef="' + k + '"><option value="">Ask every time</option><option' + (S.groupDefault[k] === 'A' ? ' selected' : '') + '>A</option><option' + (S.groupDefault[k] === 'B' ? ' selected' : '') + '>B</option></select></label>').join('') + '</div>' +
 
-    '<h2>Calendar &amp; backup</h2><div class="card set"><button class="primary" id="sIcs">Export to calendar (.ics)</button><p class="muted" id="icsNote">Creates the rest of the term with three alarms per class. Re-export after you change the timetable.</p>' +
+    '<h2>Calendar &amp; backup</h2><div class="card set"><button class="primary" id="sIcs">Export to calendar (.ics)</button><p class="muted" id="icsNote">Creates the rest of the term with three alarms per class, timed from your default address. Classes without a chosen group get one event at the earlier group. Re-export after you change the timetable.</p>' +
     '<div class="row"><button id="sBackup">Save backup</button><label class="btn" style="text-transform:none;letter-spacing:0;font:600 14px/1 var(--f-body);color:var(--ink)">Restore backup<input type="file" id="sRestore" accept="application/json,.json" hidden></label></div>' +
     '<div class="row"><button class="danger small" id="sReset">Reset timetable to the PDF</button></div><div id="resetConfirm" class="notice row" hidden style="justify-content:space-between">Replace all courses and one-week changes with the original timetable? Exams and addresses stay.<button class="danger small" id="sResetYes">Reset</button></div></div>' +
 
@@ -705,6 +706,7 @@ function renderSettings() {
   const al = $('#sAllow'); if (al) al.onclick = enableNotifications;
   const ts = $('#sTest'); if (ts) ts.onclick = () => showNote({ title: 'Leave now · Test', body: 'This is how a "Leave now" alert looks.', tag: 'test', urgent: true });
   $('#sIcs').onclick = exportIcs;
+  fillBgStatus();
   $('#sBackup').onclick = () => shareOrDownload('ggs-timetable-backup.json', JSON.stringify({ state: S, answers: A }, null, 2), 'application/json');
   $('#sRestore').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
@@ -716,6 +718,19 @@ function renderSettings() {
   $('#sResetYes').onclick = () => { S.courses = JSON.parse(JSON.stringify(E.SEED_COURSES)); S.overrides = {}; save(); render(); toast('Timetable reset'); };
 }
 
+async function fillBgStatus() {
+  const box = $('#bgStat'); if (!box) return;
+  const standalone = matchMedia('(display-mode: standalone)').matches;
+  let registered = null, last = null;
+  try { if (swReg && 'periodicSync' in swReg) registered = (await swReg.periodicSync.getTags()).includes('reminders'); } catch (e) {}
+  try { last = await E.kvGet('lastBg'); } catch (e) {}
+  const line = (ok, text) => '<p class="row" style="gap:8px;flex-wrap:nowrap"><span class="pill ' + (ok ? 'lec' : 'cx') + '">' + (ok ? 'OK' : 'NO') + '</span><span>' + text + '</span></p>';
+  box.innerHTML = '<div class="stack" style="gap:6px">' +
+    line(standalone, standalone ? 'Opened as an installed app' : 'Opened in the browser. Install it from Chrome so it can run in the background.') +
+    line(registered === true, registered === true ? 'Background checks are registered' : registered === false ? 'Background checks are not allowed yet' : 'This browser has no background checks') +
+    line(!!last && Date.now() - last < 3 * 3600000, last ? 'Last background check: ' + dur(Date.now() - last) + ' ago' : 'No background check has run yet') +
+    '</div>';
+}
 async function exportIcs() {
   const note = $('#icsNote'), btn = $('#sIcs');
   const a = S.addresses.find(x => x.id === S.defaultAddress);
@@ -737,7 +752,7 @@ async function exportIcs() {
   }
   const res = E.buildICS(S, A, tm, new Date());
   btn.disabled = false;
-  note.textContent = 'Done.' + (res.skipped ? ' ' + res.skipped + ' group classes without a chosen or default group were left out.' : '') + (est ? ' ' + est + ' travel times are estimates.' : '');
+  note.textContent = 'Done.' + (res.skipped ? ' ' + res.skipped + ' group classes have no group yet; their alarms follow the earlier group.' : '') + (est ? ' ' + est + ' travel times are estimates.' : '');
   await shareOrDownload('tu-ggs-timetable.ics', res.text, 'text/calendar');
 }
 

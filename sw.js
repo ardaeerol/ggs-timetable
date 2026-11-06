@@ -1,8 +1,8 @@
 /* Service worker: offline cache, background reminder checks, notification buttons. */
-importScripts('./engine.js?v=9');
+importScripts('./engine.js?v=10');
 
-const CACHE = 'tu-timetable-v9';
-const SHELL = ['./', './index.html', './engine.js?v=9', './manifest.webmanifest', './app-192.png', './app-512.png', './badge-96.png'];
+const CACHE = 'tu-timetable-v10';
+const SHELL = ['./', './index.html', './engine.js?v=10', './manifest.webmanifest', './app-192.png', './app-512.png', './badge-96.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -32,7 +32,7 @@ function show(a) {
 }
 
 async function backgroundTick() {
-  try { await Engine.tick(show); } catch (e) { /* offline or storage unavailable */ }
+  try { await Engine.kvSet('lastBg', Date.now()); await Engine.tick(show); } catch (e) { /* offline or storage unavailable */ }
 }
 
 // Android Chrome wakes an installed app now and then (roughly every 15+ minutes, at Chrome's discretion).
