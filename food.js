@@ -24,7 +24,7 @@
   ];
   const FRIED = /frittiert|pommes|paniert|gebacken|backfisch|nuggets|chicken wings|burger|pizza|sahne|rahm|käsesoße|currywurst|schoko|pudding|kuchen|crumble/i;
   const VEG = /gemüse|spinat|brokkoli|broccoli|salat|bohnen|erbsen|karotte|möhre|zucchini|paprika|kohl|linsen|kichererbse|tomate|ratatouille|kürbis/i;
-  const SIDE_CAT = /beilage/i, DESSERT_CAT = /dessert|nachspeise|nachtisch/i, SKIP_CAT = /getränk|drink/i;
+  const SOUP_CAT = /suppe|eintopf/i, SIDE_CAT = /beilage/i, DESSERT_CAT = /dessert|nachspeise|nachtisch/i, SKIP_CAT = /getränk|drink/i;
   const EXTRA = /dressing|vinaigrette|sauce|soße|dip|extra|gerieben|topping|brot\b|brötchen/i;
 
   function notesText(m) { return (m.notes || []).join(' | '); }
@@ -61,6 +61,7 @@
     if (SKIP_CAT.test(c) || p == null) return 'skip';
     if (EXTRA.test(n) && p < 1.5) return 'extra';
     if (DESSERT_CAT.test(c)) return 'dessert';
+    if (SOUP_CAT.test(c) || /suppe\b|suppe$|eintopf/i.test(n)) return 'soup';
     if (SIDE_CAT.test(c)) return 'side';
     if (/salat/i.test(c) && /kleine|schale/i.test(n)) return 'side';
     return 'main';
@@ -77,22 +78,29 @@
     return pts / price;
   }
 
-  // Returns { pick, plate:[...], total, also:[...], skipped }.
+  const norm = n => String(n || '').toLowerCase().replace(/[^a-zäöüß]+/g, ' ').trim();
+  // Returns { pick, plate:[main, soup?, dessert?], total, also:[...], skipped }.
+  // prefs.liked: dish names you liked; they move up the next time they are on the menu.
   function recommend(meals, prefs) {
     prefs = Object.assign({}, DEFAULT_PREFS, prefs || {});
-    const all = meals.map(m => ({ m, kind: kindOf(m), pork: porkOf(m), protein: proteinOf(m), health: healthOf(m), price: priceOf(m) }));
+    const liked = new Set((prefs.liked || []).map(norm));
+    const all = meals.map(m => ({ m, kind: kindOf(m), pork: porkOf(m), protein: proteinOf(m), health: healthOf(m), price: priceOf(m), liked: liked.has(norm(m.name)) }));
     const allowed = x => !prefs.noPork || x.pork === 'no';
     const skipped = prefs.noPork ? all.filter(x => x.kind !== 'skip' && x.pork !== 'no').length : 0;
-    const mains = all.filter(x => x.kind === 'main' && allowed(x)).map(x => Object.assign(x, { score: score(x, prefs) }))
+    const mains = all.filter(x => x.kind === 'main' && allowed(x)).map(x => Object.assign(x, { score: score(x, prefs) + (x.liked ? 0.4 : 0) }))
       .sort((a, b) => (b.score - a.score) || ((a.price || 9) - (b.price || 9)));
     if (!mains.length) return { pick: null, plate: [], total: 0, also: [], skipped };
     const pick = mains[0];
     const plate = [pick];
-    // Light on protein: suggest a cheap quark or yoghurt on the side.
-    if (prefs.protein && pick.protein.level < 3) {
-      const pd = all.filter(x => x.kind === 'dessert' && allowed(x) && /quark|skyr|joghurt/i.test(x.m.name)).sort((a, b) => (a.price || 9) - (b.price || 9))[0];
-      if (pd) plate.push(Object.assign(pd, { role: 'protein' }));
-    }
+    // Soup: one you liked, then the most protein, then the cheapest.
+    const soup = all.filter(x => x.kind === 'soup' && allowed(x))
+      .sort((a, b) => (b.liked - a.liked) || (b.protein.level - a.protein.level) || ((a.price || 9) - (b.price || 9)))[0];
+    if (soup) plate.push(Object.assign(soup, { role: 'soup' }));
+    // Dessert: one you liked, then quark/skyr/yoghurt when protein matters, then the traffic light, then price.
+    const protDessert = x => (prefs.protein && /quark|skyr|joghurt|pudding.*protein|protein/i.test(x.m.name)) ? 1 : 0;
+    const dessert = all.filter(x => x.kind === 'dessert' && allowed(x))
+      .sort((a, b) => (b.liked - a.liked) || (protDessert(b) - protDessert(a)) || (b.health.level - a.health.level) || ((a.price || 9) - (b.price || 9)))[0];
+    if (dessert) plate.push(Object.assign(dessert, { role: 'dessert' }));
     const total = plate.reduce((t, x) => t + (x.price || 0), 0);
     const also = mains.slice(1).filter(x => !prefs.protein || x.protein.level >= 2).slice(0, 2);
     return { pick, plate, total, also, skipped };
@@ -107,5 +115,5 @@
     return r;
   }
 
-  root.Food = { recommend, reasons, porkOf, proteinOf, healthOf, kindOf, priceOf, DEFAULT_PREFS };
+  root.Food = { norm, recommend, reasons, porkOf, proteinOf, healthOf, kindOf, priceOf, DEFAULT_PREFS };
 })(typeof self !== 'undefined' ? self : globalThis);

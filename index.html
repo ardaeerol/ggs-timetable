@@ -158,6 +158,20 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri);outline:none}
 .result{display:block;width:100%;text-align:left;font-weight:500;border-radius:14px}
 /* campus */
 .meal{display:flex;justify-content:space-between;gap:12px;padding:10px 0}
+.prole{display:inline-block;min-width:76px;font-size:12px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.04em}
+body{touch-action:manipulation}
+button,.btn,nav.tabs,.sd,.ev,.wrow,.chip,.pill{-webkit-user-select:none;user-select:none}
+button,.btn,.wrow,.ev-card,.sd,.gap div,.next[data-card-occ]{transition:transform .09s ease,filter .09s ease}
+button:active,.btn:active,.wrow:active,.ev:active .ev-card,.sd:active,.gap:active div,.next[data-card-occ]:active{transform:scale(.975);filter:brightness(.96)}
+body.kb nav.tabs,body.kb .fab{display:none}
+body.kb{padding-bottom:16px}
+@media (prefers-reduced-motion: no-preference){
+  .enter{animation:fadein .18s ease-out}
+  @keyframes fadein{from{opacity:.0;transform:translateY(6px)}}
+  .slide-l{animation:sl .2s cubic-bezier(.2,.8,.2,1)} @keyframes sl{from{opacity:.3;transform:translateX(28px)}}
+  .slide-r{animation:sr .2s cubic-bezier(.2,.8,.2,1)} @keyframes sr{from{opacity:.3;transform:translateX(-28px)}}
+}
+@media (min-width:720px){ .wrap{max-width:720px} nav.tabs{justify-content:center;gap:24px} .appbar h1{font-size:34px} }
 .fchips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .fchip{min-height:34px;padding:7px 13px;font-size:13px;background:var(--surface-2);color:var(--muted)}
 .fchip[aria-pressed="true"]{background:var(--pri-c);color:var(--on-pri-c)}
@@ -224,9 +238,9 @@ nav.tabs a[aria-current="page"] .ic{background:var(--pri-c);color:var(--on-pri-c
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="engine.js?v=17"></script>
-<script src="native.js?v=17"></script>
-<script src="food.js?v=17"></script>
+<script src="engine.js?v=18"></script>
+<script src="native.js?v=18"></script>
+<script src="food.js?v=18"></script>
 <script>
 'use strict';
 const E = window.Engine;
@@ -568,7 +582,7 @@ function editCourse(id) {
     '<div class="grid2"><label>Day<select id="cDay">' + [1, 2, 3, 4, 5, 6].map(d => '<option value="' + d + '"' + (d === c.day ? ' selected' : '') + '>' + DAYS[d] + '</option>').join('') + '</select></label><label>First meeting<input type="date" id="cFirst" value="' + h(c.startDate) + '"></label></div>' +
     '<div class="grid2"><label>Start<input type="time" id="cStart" value="' + h(c.start) + '"></label><label>End<input type="time" id="cEnd" value="' + h(c.end) + '"></label></div>' +
     '<div class="grid2"><label>Room<input id="cRoom" value="' + h(c.room) + '"></label><label>Building<select id="cBld">' + buildingOptions(c.building) + '</select></label></div>' +
-    '<div id="cOther" ' + (c.building === 'OTHER' ? '' : 'hidden') + ' class="set"><label>Address<input id="cAddr" value="' + h(c.address) + '" placeholder="Street and number, Berlin"></label><div class="row"><button class="small" id="cFind">Find address</button><span class="mono muted" id="cCoord">' + h(c.lat != null ? c.lat.toFixed(4) + ', ' + c.lng.toFixed(4) : 'not located yet') + '</span></div><div id="cResults" class="stack"></div></div>' +
+    '<div id="cOther" ' + (c.building === 'OTHER' ? '' : 'hidden') + ' class="set"><label>Address<input id="cAddr" data-enter="#cFind" enterkeyhint="search" value="' + h(c.address) + '" placeholder="Street and number, Berlin"></label><div class="row"><button class="small" id="cFind">Find address</button><span class="mono muted" id="cCoord">' + h(c.lat != null ? c.lat.toFixed(4) + ', ' + c.lng.toFixed(4) : 'not located yet') + '</span></div><div id="cResults" class="stack"></div></div>' +
     '<div class="grid2"><label>Group set<select id="cSet"><option value="">No groups</option>' + Object.keys(E.GROUP_SETS).map(k => '<option value="' + k + '"' + (c.group && c.group.set === k ? ' selected' : '') + '>' + h(E.GROUP_SETS[k].name) + '</option>').join('') + '</select></label><label>Group<select id="cOpt"><option' + (c.group && c.group.option === 'A' ? ' selected' : '') + '>A</option><option' + (c.group && c.group.option === 'B' ? ' selected' : '') + '>B</option></select></label></div>' +
     '<label>Link (ISIS, slides)<input id="cLink" type="url" value="' + h(c.link) + '" placeholder="https://isis.tu-berlin.de/…"></label>' +
     '<label>Notes<textarea id="cNotes" rows="2">' + h(c.notes) + '</textarea></label>' +
@@ -599,6 +613,7 @@ async function findAddress(text, box, onPick) {
   try {
     const res = await E.geocode(text.includes('Berlin') ? text : text + ', Berlin');
     if (!res.length) { box.innerHTML = '<p class="muted">No match. Try street and house number.</p>'; return; }
+    if (res.length === 1) { onPick(res[0]); box.innerHTML = '<p class="muted">Found: ' + h(res[0].name) + '</p>'; return; }
     box.innerHTML = res.map((r, i) => '<button class="result small" data-i="' + i + '">' + h(r.name) + ' <span class="mono muted">' + r.lat.toFixed(4) + ', ' + r.lng.toFixed(4) + '</span></button>').join('');
     box.querySelectorAll('button').forEach(b => b.onclick = () => { onPick(res[Number(b.dataset.i)]); box.innerHTML = '<p class="muted">Location saved.</p>'; });
   } catch (e) { box.innerHTML = '<p class="muted">Address search is unreachable (' + h(e.message) + '). Check your connection.</p>'; }
@@ -627,7 +642,7 @@ function editExam(id) {
     '<label>Course or title<input id="xTitle" value="' + h(x.title) + '" list="courseNames"><datalist id="courseNames">' + [...new Set(S.courses.map(c => c.title))].map(t => '<option value="' + h(t) + '">').join('') + '</datalist></label>' +
     '<div class="grid2"><label>Date<input type="date" id="xDate" value="' + h(x.date) + '"></label><label>Start<input type="time" id="xTime" value="' + h(x.time) + '"></label></div>' +
     '<div class="grid2"><label>Room<input id="xRoom" value="' + h(x.room) + '"></label><label>Building<select id="xBld">' + buildingOptions(x.building) + '</select></label></div>' +
-    '<div id="xOther" ' + (x.building === 'OTHER' ? '' : 'hidden') + ' class="set"><label>Address<input id="xAddr" value="' + h(x.address) + '"></label><div class="row"><button class="small" id="xFind">Find address</button></div><div id="xResults" class="stack"></div></div>' +
+    '<div id="xOther" ' + (x.building === 'OTHER' ? '' : 'hidden') + ' class="set"><label>Address<input id="xAddr" data-enter="#xFind" enterkeyhint="search" value="' + h(x.address) + '"></label><div class="row"><button class="small" id="xFind">Find address</button></div><div id="xResults" class="stack"></div></div>' +
     '<label>Duration (minutes)<input type="number" id="xDur" min="15" step="15" value="' + h(x.duration) + '"></label>' +
     '<label>Notes<textarea id="xNotes" rows="2" placeholder="Allowed aids, registration deadline…">' + h(x.notes) + '</textarea></label>' +
     '<div class="row"><button class="primary" id="xSave">Save</button><button class="ghost" id="xClose">Close</button>' + (isNew ? '' : '<button class="danger" id="xDel">Delete</button>') + '</div></div>';
@@ -707,8 +722,11 @@ async function showDish(btn) {
   const row = (lang, label, id, text) => '<div class="trow"><span class="pill ex">' + lang + '</span><div style="min-width:0"><div class="muted mono">' + label + '</div><div class="tname" id="' + id + '">' + text + '</div></div></div>';
   openSheet('<h3 style="margin-bottom:14px">Dish</h3><div class="stack" style="gap:14px">' +
     row('DE', 'Deutsch', 'trDe', h(de)) + row('EN', 'English', 'trEn', '<span class="muted">Translating…</span>') + row('TR', 'Türkçe', 'trTr', '<span class="muted">Çevriliyor…</span>') +
-    '</div><p class="muted" style="margin-top:14px;font-size:13px">Machine translation. When a name looks odd, trust the German.</p><div class="row" style="margin-top:14px"><button class="tonal" id="trClose">Close</button></div>',
-    () => { $('#trClose').onclick = closeSheet; });
+    '</div><p class="muted" style="margin-top:14px;font-size:13px">Machine translation. When a name looks odd, trust the German. Liked dishes move up in your picks.</p><div class="row" style="margin-top:14px"><button class="' + (isLiked(de) ? 'primary' : 'tonal') + '" id="trLike">' + (isLiked(de) ? '♥ Liked' : '♡ Like') + '</button><button class="ghost" id="trClose">Close</button></div>',
+    () => {
+      $('#trClose').onclick = closeSheet;
+      $('#trLike').onclick = () => { const on = toggleLike(de); const b = $('#trLike'); b.className = on ? 'primary' : 'tonal'; b.textContent = on ? '♥ Liked' : '♡ Like'; toast(on ? 'Liked. It will move up when it is on the menu.' : 'Removed from liked'); if (view === 'mensa') renderMensa(); };
+    });
   for (const [lang, id] of [['en', '#trEn'], ['tr', '#trTr']]) {
     translate(de, lang).then(t => { const el = $(id); if (el) el.textContent = t || 'Not available right now'; });
   }
@@ -793,7 +811,9 @@ async function getMeals(ds) {
   mealCache[ds] = { meals, ts: Date.now() };
   return meals;
 }
-function foodPrefs() { return Object.assign({}, Food.DEFAULT_PREFS, S.settings.foodPrefs || {}); }
+function foodPrefs() { return Object.assign({}, Food.DEFAULT_PREFS, S.settings.foodPrefs || {}, { liked: S.settings.likedDishes || [] }); }
+function isLiked(name) { return (S.settings.likedDishes || []).some(n => Food.norm(n) === Food.norm(name)); }
+function toggleLike(name) { const l = S.settings.likedDishes || []; S.settings.likedDishes = isLiked(name) ? l.filter(n => Food.norm(n) !== Food.norm(name)) : l.concat([name]); save(); return isLiked(name); }
 const PREF_LABELS = [['noPork', 'No pork'], ['protein', 'Protein for the price']];
 function eur(x) { return x.toFixed(2).replace('.', ',') + ' €'; }
 function pickCard(rec, prefs) {
@@ -801,7 +821,7 @@ function pickCard(rec, prefs) {
   const pk = rec.pick;
   return '<div class="card next pick"><div class="lbl">Today\'s pick</div><h3>' + h(pk.m.name) + '</h3>' +
     '<div class="row" style="margin-top:10px;gap:6px">' + Food.reasons(pk, prefs).map(t => '<span class="pill">' + h(t) + '</span>').join('') + '</div>' +
-    (rec.plate.length > 1 ? '<div class="plate">' + rec.plate.map(x => '<div class="prow"><span>' + (x.role === 'side' ? '+ ' : x.role === 'protein' ? '+ ' : '') + h(x.m.name) + (x.role === 'protein' ? ' <span style="opacity:.75">for protein</span>' : x.role === 'side' ? ' <span style="opacity:.75">for veg</span>' : '') + '</span><b>' + (x.price != null ? eur(x.price) : '') + '</b></div>').join('') +
+    (rec.plate.length > 1 ? '<div class="plate">' + rec.plate.map(x => '<div class="prow"><span><span class="prole">' + (x.role === 'soup' ? 'Soup' : x.role === 'dessert' ? 'Dessert' : 'Main') + '</span>' + h(x.m.name) + (x.liked ? ' ♥' : '') + '</span><b>' + (x.price != null ? eur(x.price) : '') + '</b></div>').join('') +
       '<div class="prow tot"><span>Plate</span><b>' + eur(rec.total) + '</b></div></div>'
       : '<div class="big" style="margin-top:12px;font-size:30px">' + (pk.price != null ? eur(pk.price) : '') + '</div>') +
     (rec.also.length ? '<p class="trav" style="margin-top:12px">Also good: ' + rec.also.map(x => h(x.m.name) + (x.price != null ? ' (' + eur(x.price) + ')' : '')).join(' · ') + '</p>' : '') +
@@ -837,11 +857,11 @@ async function renderMensa() {
     meals.forEach(m => (cats[m.category || 'Other'] = cats[m.category || 'Other'] || []).push(m));
     let n = 0;
     body.innerHTML = pickCard(rec, prefs) +
-      '<p class="muted" style="margin:12px 0 10px;font-size:13px">The pick gives the most protein for the price. Protein is estimated from the dish name; the Mensa does not publish it. Pork is checked from the labels and the name, so read the counter label for sausages and mince. Press and hold a dish for English and Turkish.</p><div class="stack">' +
+      '<p class="muted" style="margin:12px 0 10px;font-size:13px">The pick gives the most protein for the price, with a soup and a dessert. Desserts you like (press and hold, then ♥) come first. Protein is estimated from the dish name; the Mensa does not publish it. Pork is checked from the labels and the name, so read the counter label for sausages and mince. Press and hold a dish for English and Turkish.</p><div class="stack">' +
       Object.keys(cats).map(cat => '<div class="card"><h2 style="margin:0 0 6px">' + h(cat) + '</h2>' + cats[cat].map(m => {
       const p = Food.priceOf(m), pork = Food.porkOf(m), pr = Food.proteinOf(m);
       const veg = (m.notes || []).some(x => /vegan/i.test(x)) ? 'vegan' : (m.notes || []).some(x => /vegetar/i.test(x)) ? 'vegetarian' : '';
-      const tags = (veg ? '<span class="pill lec">' + veg + '</span>' : '') + (pr.level === 3 ? '<span class="pill ex">protein</span>' : '') +
+      const tags = (veg ? '<span class="pill lec">' + veg + '</span>' : '') + (pr.level === 3 ? '<span class="pill ex">protein</span>' : '') + (isLiked(m.name) ? '<span class="pill lec">♥</span>' : '') +
         (prefs.noPork && pork === 'yes' ? '<span class="pill cx">pork</span>' : prefs.noPork && pork === 'maybe' ? '<span class="pill chg">pork?</span>' : '');
       const i = n++;
       return '<button class="meal dish" data-dish="' + i + '" data-de="' + h(m.name) + '" aria-label="' + h(m.name) + '. Press and hold for English and Turkish"><div style="min-width:0"><span class="dname">' + h(m.name) + '</span>' + (tags ? ' <span class="dtags">' + tags + '</span>' : '') + '</div><div class="price">' + (p != null ? eur(p) : '') + '</div></button>';
@@ -859,7 +879,7 @@ function renderSettings() {
   let html = updateCard() + '<h2 style="margin-top:6px">Addresses</h2><div class="stack">' + S.addresses.map((a, i) =>
     '<div class="card set"><div class="row" style="justify-content:space-between"><label style="flex:1">Name<input id="aLabel' + i + '" value="' + h(a.label) + '"></label>' +
     '<label class="toggle" style="gap:8px;flex:none;margin-top:16px">Default<input type="radio" name="defAddr" value="' + h(a.id) + '"' + (S.defaultAddress === a.id ? ' checked' : '') + '></label></div>' +
-    '<label>Address<input id="aText' + i + '" value="' + h(a.text) + '" placeholder="Street, number, Berlin"></label>' +
+    '<label>Address<input id="aText' + i + '" data-enter="[data-find=&quot;' + i + '&quot;]" enterkeyhint="search" autocomplete="street-address" value="' + h(a.text) + '" placeholder="Street, number, Berlin"></label>' +
     '<div class="row"><button class="small" data-find="' + i + '">Find address</button><span class="mono muted">' + (a.lat != null ? a.lat.toFixed(4) + ', ' + a.lng.toFixed(4) : 'not located') + '</span></div><div class="stack" id="aRes' + i + '"></div></div>').join('') + '</div>' +
 
     '<h2>Location</h2><div class="card set"><label class="toggle">Use my live location when the app is open<input type="checkbox" id="sLoc"' + (st.useLocation ? ' checked' : '') + '></label>' +
@@ -1120,6 +1140,8 @@ function showBroken(e) {
   el.innerHTML = '<div class="notice"><strong>The app is still updating.</strong><p style="margin-top:6px">Close it completely and open it again. If this stays, pull down to reload.</p><p class="mono muted" style="margin-top:6px">' + h(e && e.message) + '</p></div>';
   if (swReg) swReg.update().catch(() => {});
 }
+const scrollMem = {};
+window.addEventListener('scroll', () => { scrollMem[view] = window.scrollY; }, { passive: true });
 function route() {
   const hsh = location.hash.replace('#', '');
   view = ({ today: 'today', week: 'week', exams: 'exams', mensa: 'mensa', libraries: 'mensa', prefs: 'settings' })[hsh] || 'today';
@@ -1127,7 +1149,10 @@ function route() {
   ['today', 'week', 'exams', 'mensa', 'settings'].forEach(v => { $('#v-' + v).hidden = v !== view; });
   document.querySelectorAll('nav.tabs a').forEach(a => { if (a.dataset.v === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   if (view === 'today') selDay = null;
-  $('#sheetHost').innerHTML = ''; render(); window.scrollTo(0, 0);
+  $('#sheetHost').innerHTML = ''; render();
+  const sec = $('#v-' + view);
+  if (sec && !matchMedia('(prefers-reduced-motion: reduce)').matches) { sec.classList.remove('enter'); void sec.offsetWidth; sec.classList.add('enter'); }
+  window.scrollTo(0, scrollMem[view] || 0);
 }
 document.addEventListener('click', e => {
   const ans = e.target.closest('[data-ans]'); if (ans) { const [s, d, o] = ans.dataset.ans.split('|'); answer(s, d, o || null); closeSheet(); toast(o ? 'Group ' + o + ' for ' + fmtDate(E.parseYmd(d)) : 'You will be asked again'); return; }
@@ -1136,7 +1161,7 @@ document.addEventListener('click', e => {
     navigator.clipboard.writeText(t).then(() => toast('Address copied'), () => toast(t, 6000));
     return;
   }
-  const fp = e.target.closest('[data-fpref]'); if (fp) { const k = fp.dataset.fpref; S.settings.foodPrefs = Object.assign(foodPrefs(), { [k]: !foodPrefs()[k] }); save(); renderMensa(); return; }
+  const fp = e.target.closest('[data-fpref]'); if (fp) { const k = fp.dataset.fpref; { const fp0 = foodPrefs(); delete fp0.liked; S.settings.foodPrefs = Object.assign(fp0, { [k]: !fp0[k] }); } save(); renderMensa(); return; }
   const dy = e.target.closest('[data-day]'); if (dy) { selDay = dy.dataset.day; renderHeader(); renderToday(); return; }
   const dish = e.target.closest('[data-dish]'); if (dish) { if (!pressFired && e.detail === 0) showDish(dish); pressFired = false; return; }
   const cardOcc = e.target.closest('[data-card-occ]');
@@ -1146,6 +1171,40 @@ document.addEventListener('click', e => {
   const ex = e.target.closest('[data-exam]'); if (ex) { editExam(ex.dataset.exam); return; }
 });
 window.addEventListener('hashchange', route);
+// Enter: run the field's action (address search) or close the keyboard.
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !e.target.matches('input')) return;
+  const sel = e.target.dataset.enter;
+  e.preventDefault();
+  if (sel) { const b = document.querySelector(sel); if (b) b.click(); }
+  e.target.blur();
+});
+// Hide the bottom bar while typing.
+document.addEventListener('focusin', e => { if (e.target.matches('input:not([type=checkbox]):not([type=radio]):not([type=file]),textarea')) document.body.classList.add('kb'); });
+document.addEventListener('focusout', () => setTimeout(() => { if (!document.activeElement || !document.activeElement.matches('input,textarea')) document.body.classList.remove('kb'); }, 120));
+// Swipe left/right: next or previous day (Today, Mensa) or week (Week).
+(function () {
+  let sx = null, sy = 0, st = 0;
+  document.addEventListener('touchstart', e => {
+    if ($('#sheetHost').querySelector('.sheet') || e.touches.length !== 1 || e.target.closest('input,textarea,select,.seg,nav.tabs')) { sx = null; return; }
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = Date.now();
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (sx == null) return;
+    const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; sx = null;
+    if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 0.6 || Date.now() - st > 700) return;
+    const dir = dx < 0 ? 1 : -1;
+    if (view === 'today') { selDay = E.ymd(E.addDays(E.parseYmd(selDay || E.ymd(new Date())), dir)); slideIn('#v-today', dir); renderHeader(); renderToday(); }
+    else if (view === 'week') { weekOffset += dir; slideIn('#v-week', dir); renderWeek(); }
+    else if (view === 'mensa' && campusTab === 'mensa') { mensaDay += dir; slideIn('#v-mensa', dir); renderMensa(); }
+  }, { passive: true });
+})();
+function slideIn(sel, dir) {
+  const el = $(sel); if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  el.classList.remove('slide-l', 'slide-r'); void el.offsetWidth; el.classList.add(dir > 0 ? 'slide-l' : 'slide-r');
+}
+// A short "Saved" after any change in Settings.
+document.addEventListener('change', e => { if (view === 'settings' && e.target.closest('#v-settings') && !e.target.matches('[type=file]')) toast('Saved', 1200); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkWebUpdate(); reloadShared().then(() => { render(); runTick(); }); } });
 
 (async function boot() {
