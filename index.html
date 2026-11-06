@@ -82,6 +82,7 @@ button:disabled{opacity:.6}
 .scap{font:600 12px/1 var(--f-body);color:var(--muted);text-align:center;margin:2px 0 8px}
 .strip{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .swap{transition:opacity .15s}
+@media (hover: none) and (pointer: coarse){ .navarrow{display:none} body .weeknav{justify-content:center} }
 .swap.loading{opacity:.45}
 .sd{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 8px;border-radius:16px;background:transparent;min-height:0;color:var(--ink)}
 .sd .wd{font:600 11.5px/1 var(--f-body);color:var(--muted)}
@@ -268,9 +269,9 @@ nav.tabs a[aria-current="page"] .ic{background:var(--pri-c);color:var(--on-pri-c
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="engine.js?v=21"></script>
-<script src="native.js?v=21"></script>
-<script src="food.js?v=21"></script>
+<script src="engine.js?v=22"></script>
+<script src="native.js?v=22"></script>
+<script src="food.js?v=22"></script>
 <script>
 'use strict';
 const E = window.Engine;
@@ -601,7 +602,7 @@ function shiftWeek(dir) {
 }
 function renderWeek() {
   const arrow = d => '<svg viewBox="0 0 24 24"><path d="' + (d < 0 ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6') + '"/></svg>';
-  $('#v-week').innerHTML = '<div class="weeknav"><button class="icon-btn" id="wPrev" aria-label="Previous week">' + arrow(-1) + '</button><div style="text-align:center"><strong id="wRange"></strong><div class="mono muted" id="wRel"></div></div><button class="icon-btn" id="wNext" aria-label="Next week">' + arrow(1) + '</button></div>' +
+  $('#v-week').innerHTML = '<div class="weeknav"><button class="icon-btn navarrow" id="wPrev" aria-label="Previous week">' + arrow(-1) + '</button><div style="text-align:center"><strong id="wRange"></strong><div class="mono muted" id="wRel"></div></div><button class="icon-btn navarrow" id="wNext" aria-label="Next week">' + arrow(1) + '</button></div>' +
     '<div class="row" style="justify-content:center;margin-top:6px" id="wToday" hidden><button class="small ghost" id="wTodayBtn">Back to this week</button></div>' +
     '<div id="wDays" class="swap">' + weekDaysHTML() + '</div>' +
     '<div class="sec-head"><h2>Your courses</h2><span class="mono muted">' + S.courses.filter(c => c.enabled).length + ' active</span></div><div class="card stack" style="gap:14px">' + S.courses.map(c =>
@@ -969,6 +970,7 @@ async function updateMensaDay(dir) {
   const d = mensaDate(), ds = E.ymd(d), body = $('#mBody'), label = $('#mDay');
   if (!body || !label) return;
   label.textContent = DAYS[d.getDay()] + ' ' + d.getDate() + '.' + (d.getMonth() + 1) + '.';
+  const mt = $('#mToday'); if (mt) mt.hidden = mensaDay === 0;
   const seq = ++mensaSeq;
   const cached = mealCache[ds] && Date.now() - mealCache[ds].ts < 30 * 60000;
   if (!cached) { body.classList.add('loading'); if (!body.firstChild) body.innerHTML = '<div class="empty">Loading the menu…</div>'; }
@@ -987,13 +989,15 @@ async function renderMensa() {
   if ($('#mBody')) { renderMensaPrefs(); updateMensaDay(0); return; } // shell already there
   const arrow = d => '<svg viewBox="0 0 24 24"><path d="' + (d < 0 ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6') + '"/></svg>';
   $('#v-mensa').innerHTML = campusSwitch() +
-    '<div class="weeknav" style="margin-top:12px"><button class="icon-btn" id="mPrev" aria-label="Previous day">' + arrow(-1) + '</button><div style="text-align:center"><strong id="mDay"></strong><div class="mono muted">Mensa TU Hardenbergstraße</div></div><button class="icon-btn" id="mNext" aria-label="Next day">' + arrow(1) + '</button></div>' +
+    '<div class="weeknav" style="margin-top:12px"><button class="icon-btn navarrow" id="mPrev" aria-label="Previous day">' + arrow(-1) + '</button><div style="text-align:center"><strong id="mDay"></strong><div class="mono muted">Mensa TU Hardenbergstraße</div></div><button class="icon-btn navarrow" id="mNext" aria-label="Next day">' + arrow(1) + '</button></div>' +
+    '<div class="row" style="justify-content:center;margin-top:6px" id="mToday" hidden><button class="small ghost" id="mTodayBtn">Back to today</button></div>' +
     '<div class="fchips" id="mPrefs" role="group" aria-label="Food preferences"></div>' +
     '<div id="mBody" class="swap" style="margin-top:12px"></div>' +
     '<div class="row" style="margin-top:14px"><a class="btn" target="_blank" rel="noopener" href="' + STW + '">Full menu on stw.berlin</a><a class="btn" target="_blank" rel="noopener" href="' + h(mapsLink(E.BUILDINGS.MENSA)) + '">Route to Mensa</a></div>' +
     '<p class="muted mono" style="margin-top:10px">Hardenbergstraße 34 · data via OpenMensa</p>';
   $('#mPrev').onclick = () => shiftMensa(-1);
   $('#mNext').onclick = () => shiftMensa(1);
+  $('#mTodayBtn').onclick = () => { const dir = mensaDay > 0 ? -1 : 1; mensaDay = 0; updateMensaDay(dir); };
   renderMensaPrefs();
   updateMensaDay(0);
 }
