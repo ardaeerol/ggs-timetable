@@ -178,7 +178,8 @@ nav.tabs a[aria-current="page"] .ic{background:var(--pri-c);color:var(--on-pri-c
 .scrim{position:fixed;inset:0;background:rgba(10,12,16,.45);z-index:30;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--surface);width:100%;max-width:640px;max-height:90vh;overflow:auto;border-radius:28px 28px 0 0;
   padding:14px max(18px,env(safe-area-inset-right,0px)) calc(22px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px))}
-.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px}
+.sheet{touch-action:pan-y;overscroll-behavior:contain}
+.sheet .grab{width:40px;height:5px;border-radius:3px;background:var(--muted);opacity:.45;margin:0 auto 18px;box-shadow:0 0 0 14px transparent}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:14px;max-width:calc(100% - 32px);font-weight:500;box-shadow:0 8px 28px rgba(0,0,0,.25)}
 .notice{background:var(--warn-c);color:var(--warn);padding:11px 13px;border-radius:14px;font-weight:500}
 .empty{padding:22px 16px;text-align:center;color:var(--muted);background:var(--surface);border-radius:var(--r)}
@@ -212,8 +213,8 @@ nav.tabs a[aria-current="page"] .ic{background:var(--pri-c);color:var(--on-pri-c
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="engine.js?v=12"></script>
-<script src="native.js?v=12"></script>
+<script src="engine.js?v=13"></script>
+<script src="native.js?v=13"></script>
 <script>
 'use strict';
 const E = window.Engine;
@@ -258,13 +259,53 @@ function mapsLink(place) {
   if (o && o.kind === 'address') { const a = S.addresses.find(x => x.id === S.defaultAddress); from = (a && a.text) || (o.lat + ',' + o.lng); }
   return E.mapsUrl(place, from);
 }
+// Bottom sheet: closes with Close, a tap outside, a downward swipe, or the Android back gesture.
 function openSheet(html, onMount) {
   const host = $('#sheetHost');
-  host.innerHTML = '<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>' + html + '</div></div>';
-  $('#scrim').addEventListener('click', e => { if (e.target.id === 'scrim') closeSheet(); });
-  if (onMount) onMount(host.querySelector('.sheet'));
+  const wasOpen = !!host.firstChild;
+  host.innerHTML = '<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="grab" aria-hidden="true"></div>' + html + '</div></div>';
+  const scrim = $('#scrim'), sheet = host.querySelector('.sheet');
+  scrim.addEventListener('click', e => { if (e.target.id === 'scrim') closeSheet(); });
+  // One history entry per open sheet, so Back closes the sheet instead of leaving the app.
+  if (!wasOpen) { try { history.pushState({ sheet: true }, ''); } catch (e) {} }
+  let y0 = null, dy = 0, t0 = 0, dragging = false;
+  sheet.addEventListener('touchstart', e => {
+    if (e.target.closest('input,select,textarea')) { y0 = null; return; }
+    const top = e.touches[0].clientY - sheet.getBoundingClientRect().top;
+    if (sheet.scrollTop > 0 && top > 56) { y0 = null; return; } // scrolled: only the handle area drags
+    y0 = e.touches[0].clientY; dy = 0; t0 = Date.now(); dragging = false;
+  }, { passive: true });
+  sheet.addEventListener('touchmove', e => {
+    if (y0 == null) return;
+    dy = e.touches[0].clientY - y0;
+    if (!dragging && dy < -4) { y0 = null; return; } // scrolling up inside the sheet
+    if (dy > 6) {
+      dragging = true; e.preventDefault();
+      sheet.style.transition = 'none'; sheet.style.transform = 'translateY(' + dy + 'px)';
+      scrim.style.background = 'rgba(10,12,16,' + Math.max(0, .45 * (1 - dy / sheet.offsetHeight)).toFixed(3) + ')';
+    }
+  }, { passive: false });
+  sheet.addEventListener('touchend', () => {
+    if (y0 == null || !dragging) { y0 = null; return; }
+    const fast = dy / Math.max(1, Date.now() - t0) > 0.6;
+    y0 = null;
+    if (dy > Math.min(140, sheet.offsetHeight * .3) || (fast && dy > 40)) closeSheet();
+    else { sheet.style.transition = 'transform .2s cubic-bezier(.2,.8,.2,1)'; sheet.style.transform = ''; scrim.style.background = ''; }
+  });
+  if (onMount) onMount(sheet);
 }
-function closeSheet() { $('#sheetHost').innerHTML = ''; }
+function closeSheet(fromHistory) {
+  const host = $('#sheetHost'), sheet = host.querySelector('.sheet');
+  if (!sheet) return;
+  if (fromHistory !== true && history.state && history.state.sheet) { try { history.back(); } catch (e) {} return; } // popstate finishes the close
+  const scrim = $('#scrim');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) { host.innerHTML = ''; return; }
+  sheet.style.transition = 'transform .18s ease-in'; sheet.style.transform = 'translateY(105%)';
+  if (scrim) { scrim.style.transition = 'background .18s'; scrim.style.background = 'rgba(10,12,16,0)'; }
+  setTimeout(() => { if (host.querySelector('.sheet') === sheet) host.innerHTML = ''; }, 190);
+}
+window.addEventListener('popstate', () => { if ($('#sheetHost').querySelector('.sheet')) closeSheet(true); });
 async function shareOrDownload(name, text, mime) {
   if (NATIVE) { try { await Native.shareFile(name, text, mime); } catch (e) { toast('Could not share the file: ' + e.message, 5000); } return; }
   const file = new File([text], name, { type: mime });
@@ -478,7 +519,7 @@ function occSheet(occId) {
   if (!o) return;
   const p = E.placeOf(S, crs), ov = S.overrides[occId] || {};
   let html = '<div class="row" style="justify-content:space-between"><h3>' + h(crs.title) + '</h3>' + typePill(crs.type) + '</div>' +
-    '<p class="muted" style="margin:4px 0 12px">' + h(DAYS[o.start.getDay()]) + ' ' + h(fmtDate(o.start)) + ' · ' + E.hm(o.start) + '–' + E.hm(o.end) + ' · ' + h(crs.lecturer) + '</p>' +
+    '<p class="muted" style="margin:4px 0 12px">' + h(DAYS[o.start.getDay()]) + ' ' + o.start.getDate() + '.' + (o.start.getMonth() + 1) + '. · ' + E.hm(o.start) + '–' + E.hm(o.end) + ' · ' + h(crs.lecturer) + '</p>' +
     '<p><strong>' + h(o.room) + '</strong> · ' + h(p.name) + '</p><p class="mono muted">' + h(p.address || '') + '</p>' +
     (crs.notes ? '<p style="margin-top:8px">' + h(crs.notes) + '</p>' : '') +
     '<div class="row" style="margin-top:12px"><a class="btn primary" target="_blank" rel="noopener" href="' + h(mapsLink(p)) + '">Route in Maps</a>' + (crs.link ? '<a class="btn" target="_blank" rel="noopener" href="' + h(crs.link) + '">Course page</a>' : '') + '</div>';
@@ -1020,7 +1061,7 @@ function route() {
   ['today', 'week', 'exams', 'mensa', 'settings'].forEach(v => { $('#v-' + v).hidden = v !== view; });
   document.querySelectorAll('nav.tabs a').forEach(a => { if (a.dataset.v === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   if (view === 'today') selDay = null;
-  closeSheet(); render(); window.scrollTo(0, 0);
+  $('#sheetHost').innerHTML = ''; render(); window.scrollTo(0, 0);
 }
 document.addEventListener('click', e => {
   const ans = e.target.closest('[data-ans]'); if (ans) { const [s, d, o] = ans.dataset.ans.split('|'); answer(s, d, o || null); closeSheet(); toast(o ? 'Group ' + o + ' for ' + fmtDate(E.parseYmd(d)) : 'You will be asked again'); return; }
