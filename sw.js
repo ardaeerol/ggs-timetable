@@ -1,8 +1,8 @@
 /* Service worker: offline cache, background reminder checks, notification buttons. */
-importScripts('./engine.js');
+importScripts('./engine.js?v=8');
 
-const CACHE = 'tu-timetable-v7';
-const SHELL = ['./', './index.html', './engine.js', './manifest.webmanifest', './app-192.png', './app-512.png', './badge-96.png'];
+const CACHE = 'tu-timetable-v8';
+const SHELL = ['./', './index.html', './engine.js?v=8', './manifest.webmanifest', './app-192.png', './app-512.png', './badge-96.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -15,7 +15,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
-  e.respondWith(fetch(e.request).then(r => {
+  // no-cache: always revalidate with GitHub Pages so page and engine never come from different versions
+  e.respondWith(fetch(e.request, { cache: 'no-cache' }).then(r => {
     const copy = r.clone();
     caches.open(CACHE).then(c => c.put(e.request, copy));
     return r;

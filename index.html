@@ -155,7 +155,7 @@ nav.tabs a[aria-current="page"]{color:var(--teal)}
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
-<script src="engine.js"></script>
+<script src="engine.js?v=8"></script>
 <script>
 'use strict';
 const E = window.Engine;
@@ -746,8 +746,16 @@ async function runTick(force) {
 
 // ---------- routing & events ----------
 function render() {
-  renderHeader();
-  if (view === 'today') renderToday(); else if (view === 'week') renderWeek(); else if (view === 'exams') renderExams(); else if (view === 'mensa') renderMensa(); else renderSettings();
+  try {
+    renderHeader();
+    if (view === 'today') renderToday(); else if (view === 'week') renderWeek(); else if (view === 'exams') renderExams(); else if (view === 'mensa') Promise.resolve(renderMensa()).catch(showBroken); else renderSettings();
+  } catch (e) { showBroken(e); }
+}
+// Never leave a blank screen: a half-updated app (new page, old engine) lands here.
+function showBroken(e) {
+  const el = $('#v-' + view); if (!el) return;
+  el.innerHTML = '<div class="notice"><strong>The app is still updating.</strong><p style="margin-top:6px">Close it completely and open it again. If this stays, pull down to reload.</p><p class="mono muted" style="margin-top:6px">' + h(e && e.message) + '</p></div>';
+  if (swReg) swReg.update().catch(() => {});
 }
 function route() {
   const hsh = location.hash.replace('#', '');
@@ -776,7 +784,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) { re
   try { const all = await E.loadAll(); S = all.state; A = all.answers; T = all.travel; LOC = all.loc; await save(); } catch (e) { idbOK = false; }
   if ('serviceWorker' in navigator) {
     try {
-      swReg = await navigator.serviceWorker.register('sw.js');
+      swReg = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
       navigator.serviceWorker.addEventListener('message', ev => {
         if (ev.data && ev.data.type === 'answers-changed') reloadShared().then(render);
         if (ev.data && ev.data.type === 'open') location.hash = ev.data.hash;

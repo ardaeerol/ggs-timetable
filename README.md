@@ -21,5 +21,8 @@ Android: Settings → Apps → GGS → Battery → "Unrestricted" so background 
 - Code changes: replace the files in the repository; the app picks up the new version on its next start.
 - Back up from Settings → Save backup before switching phones.
 
+## Releasing a code change
+Bump the version in three places together: `engine.js?v=N` in `index.html`, and `CACHE` plus both `engine.js?v=N` in `sw.js`.
+
 ## Files
 `index.html` app · `engine.js` timetable, travel and reminder logic · `sw.js` offline and background reminders · `manifest.webmanifest` + icons.
